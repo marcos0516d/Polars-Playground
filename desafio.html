@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafío - Polars Playground</title>
+    <meta name="description" content="3 desafíos prácticos de Polars: limpieza de datos, análisis de ventas y pipeline completo. Pone a prueba tus habilidades.">
+    <meta name="keywords" content="Polars desafío, limpieza de datos, análisis de ventas, pipeline, Python, retos">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://polars-playground.vercel.app/desafio.html">
+    <meta property="og:title" content="Desafío - Polars Playground">
+    <meta property="og:description" content="3 desafíos prácticos para poner a prueba tus habilidades de Polars.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://polars-playground.vercel.app/desafio.html">
+    <meta property="og:image" content="https://polars-playground.vercel.app/oso_polar.webp">
+    <meta property="og:locale" content="es_ES">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Desafío - Polars Playground">
+    <meta name="twitter:description" content="3 desafíos prácticos para poner a prueba tus habilidades de Polars.">
+    <link rel="icon" type="image/webp" href="./oso_polar.webp">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --azul: #0a0a23; --verde: #00d4aa; --morado: #667eea; --morado-claro: #764ba2;
+            --naranja: #f39c12; --gris-claro: #f8f9fa; --gris-medio: #e9ecef; --texto: #333; --blanco: #fff;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #E6FAFA; color: var(--texto); height: 100vh; overflow: hidden; }
+        .header { background: var(--azul); color: var(--blanco); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; height: 50px; }
+        .header-logo { font-size: 1.2rem; font-weight: bold; color: white; }
+        .header-steps { font-size: 0.9rem; opacity: 0.8; }
+        .header-buttons { display: flex; gap: 10px; }
+        .main-container { display: flex; height: calc(100vh - 50px); }
+        .instructions-panel { width: 40%; min-width: 300px; background: var(--blanco); border-right: 2px solid var(--gris-medio); display: flex; flex-direction: column; overflow: hidden; }
+        .instructions-header { padding: 15px 20px; border-bottom: 1px solid var(--gris-medio); background: var(--gris-claro); }
+        .instructions-header h2 { font-size: 1.1rem; color: var(--azul); }
+        .instructions-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .instructions-content h3 { color: var(--morado); margin: 15px 0 10px; font-size: 1rem; }
+        .instructions-content p { line-height: 1.6; margin-bottom: 10px; }
+        .instructions-content code { background: #f1f3f5; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.9em; }
+        .instructions-content pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+        .instructions-content pre code { background: none; padding: 0; color: inherit; }
+        .editor-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .editor-header { padding: 10px 15px; background: #282c34; color: #abb2bf; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+        .editor-container { flex: 1; overflow: hidden; }
+        .output-panel { height: 220px; min-height: 150px; background: #1e1e1e; border-top: 2px solid #444; display: flex; flex-direction: column; }
+        .output-header { padding: 8px 15px; background: #252526; color: #ccc; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+        .output-header span:first-child { display: flex; align-items: center; gap: 8px; }
+        .output-clear { background: none; border: none; color: #888; cursor: pointer; font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; }
+        .output-clear:hover { background: #3c3c3c; color: #fff; }
+        .next-lesson-btn { background: var(--verde); color: var(--azul); border: none; cursor: pointer; font-size: 0.8rem; padding: 4px 12px; border-radius: 4px; font-weight: 600; transition: all 0.2s; }
+        .next-lesson-btn:disabled { background: #3c3c3c; color: #666; cursor: not-allowed; }
+        .next-lesson-btn:not(:disabled):hover { background: #00b894; }
+        .next-lesson-btn:not(:disabled) { animation: glow 1.5s ease-in-out infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 5px var(--verde), 0 0 10px var(--verde); } 50% { box-shadow: 0 0 15px var(--verde), 0 0 25px var(--verde); } }
+        .output-container { flex: 1; overflow-y: auto; padding: 10px 15px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.85rem; }
+        .output-cell { margin-bottom: 10px; border-left: 3px solid var(--morado); padding-left: 10px; }
+        .output-cell-prompt { color: #61afef; font-size: 0.8rem; margin-bottom: 2px; }
+        .output-cell-text { color: #abb2bf; white-space: pre-wrap; word-wrap: break-word; }
+        .output-cell-text.error { color: #e06c75; }
+        .output-cell-html { color: #abb2bf; overflow-x: auto; }
+        .output-cell-html table { border-collapse: collapse !important; width: auto !important; font-size: 0.85rem; margin: 5px 0; font-family: 'Consolas', monospace; }
+        .output-cell-html th, .output-cell-html td { border: 1px solid #444 !important; padding: 6px 10px !important; text-align: left !important; white-space: nowrap; }
+        .output-cell-html th { background: #2c2c2c !important; font-weight: 600; color: #abb2bf; }
+        .output-cell-html tr:nth-child(even) { background: #252526 !important; }
+        .output-cell-html tr:nth-child(odd) { background: #1e1e1e !important; }
+        .output-welcome { color: #61afef; font-size: 0.85rem; margin-bottom: 2px; }
+        .output-welcome span { color: #98c379; }
+        .test-panel { height: 150px; min-height: 100px; background: #1e1e1e; border-top: 2px solid #444; display: flex; flex-direction: column; }
+        .test-header { padding: 8px 15px; background: #252526; color: #ccc; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+        .test-results { flex: 1; overflow-y: auto; padding: 10px 15px; font-family: 'Consolas', monospace; font-size: 0.85rem; }
+        .test-pass { color: #98c379; }
+        .test-fail { color: #e06c75; }
+        .test-info { color: #61afef; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+        .btn-primary { background: var(--naranja); color: white; }
+        .btn-primary:hover { background: #e67e22; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .loading-overlay { display: none; }
+        .output-loading {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; background: rgba(0,212,170,0.1);
+            border-bottom: 1px solid rgba(0,212,170,0.2);
+            font-size: 0.85rem; color: var(--verde);
+        }
+        .output-loading.hidden { display: none; }
+        .output-loading .spinner-sm {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(0,212,170,0.3);
+            border-top-color: var(--verde);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .step-nav { display: flex; gap: 5px; padding: 10px 15px; background: var(--gris-claro); border-bottom: 1px solid var(--gris-medio); overflow-x: auto; }
+        .step-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--gris-medio); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .step-dot.active { background: var(--morado); color: white; }
+        .step-dot.completed { background: var(--verde); color: var(--azul); }
+        .step-dot:hover { transform: scale(1.1); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: transparent; display: none; align-items: center; justify-content: center; z-index: 10000; pointer-events: none; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--blanco); border-radius: 12px; padding: 30px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: modalIn 0.3s ease; pointer-events: auto; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal-icon { font-size: 3rem; margin-bottom: 15px; }
+        .modal-title { font-size: 1.2rem; color: var(--azul); margin-bottom: 10px; font-weight: 600; }
+        .modal-message { color: #666; line-height: 1.5; margin-bottom: 20px; }
+        .modal-details { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 20px; text-align: left; font-family: 'Consolas', monospace; font-size: 0.8rem; color: #e06c75; max-height: 100px; overflow-y: auto; }
+        .modal-btn { padding: 10px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 500; background: var(--morado); color: white; transition: all 0.2s; }
+        .modal-btn:hover { background: var(--morado-claro); }
+        .solution-btn { width: 100%; padding: 12px; margin-top: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .solution-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4); }
+        @media (max-width: 991px) { .instructions-panel { max-height: 40vh; min-width: unset; width: 100%; border-right: none; border-bottom: 2px solid var(--gris-medio); } .editor-panel { min-height: 60vh; } .main-container { flex-direction: column; overflow-y: auto; } }
+        @media (max-width: 767px) { body { overflow: auto; height: auto; } .header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; } #mobileNav { top: 65px; } .header-steps { display: none !important; } .header-buttons .btn-text { display: none; } .header-buttons .btn { width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 1rem; transform: translateX(200vw); transition: transform 0.4s ease; } .header-buttons .volver-btn { transform: translateX(90px) !important; } body.output-active .header-buttons .volver-btn, body.editor-active .header-buttons .volver-btn { transform: translateX(0) !important; } body.output-active .header-buttons .btn, body.editor-active .header-buttons .btn { transform: translateX(0); } .instructions-panel { max-height: none; height: auto; border-right: none; } .main-container { height: auto; overflow-y: auto; }         .guide-link, .solution-btn { display: none !important; } .d-md-none.position-fixed.bottom-0 { bottom: 185px !important; transition: transform 0.3s ease; } body.output-active .d-md-none.position-fixed.bottom-0 { transform: translateX(calc(100% + 60px)); } #mobileNav { position: fixed; top: 50px; left: 0; right: 0; z-index: 999; } .main-container { margin-top: 92px; } .editor-panel { display: flex; flex-direction: column; height: 665px; overflow: hidden; position: relative; } .editor-container { min-height: 400px; height: 50vh; } .output-panel { position: absolute; bottom: 50%; left: 0; right: 0; height: 50%; transform: translateY(100%); transition: transform 0.4s ease; z-index: 10; } .test-panel { position: absolute; bottom: 0; left: 0; right: 0; height: 50%; transform: translateY(100%); transition: transform 0.4s ease; z-index: 11; } .panel-visible .output-panel, .panel-visible .test-panel { transform: translateY(0); } .polars-btn { } body.output-active .polars-btn, body.editor-active .polars-btn { display: flex !important; bottom: -50px !important; right: 109px !important; width: 205px !important; height: 205px !important; opacity: 0.5; } }
+        #mobileNav { background: var(--azul); }
+        #mobileNav .nav-link { color: rgba(255,255,255,0.7); border: none; font-size: 0.9rem; padding: 8px 16px; }
+        #mobileNav .nav-link.active { color: var(--morado); background: rgba(255,255,255,0.05); border-bottom: 2px solid var(--morado); }
+    </style>
+</head>
+<body>
+    <!-- ERROR MODAL -->
+    <div class="modal-overlay" id="errorModal">
+        <div class="modal">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title">Revisa bien tu código</div>
+            <div class="modal-message">Algo no está bien escrito. Revisa la sintaxis y vuelve a intentar.</div>
+            <div class="modal-details" id="modalDetails"></div>
+            <button class="modal-btn" onclick="closeModal()">Entendido</button>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header">
+        <a href="index.html" class="header-logo" style="text-decoration:none;"><img src="oso_polar.webp" alt="Logo Polars Playground" style="height:1.2em;vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);"> Polars Playground <span style="color: var(--morado);">- Desafío</span></a>
+        <div class="header-steps d-none d-sm-block" id="stepInfo">Desafío 1 de 3</div>
+        <div class="header-buttons">
+            <a href="index.html" class="btn btn-secondary volver-btn" style="text-decoration:none;"><span class="d-inline d-sm-none">←</span><span class="btn-text">Volver</span></a>
+            <button class="btn btn-secondary" onclick="resetCode()">↻ <span class="btn-text d-none d-sm-inline">Reiniciar</span></button>
+            <button class="btn btn-primary" onclick="runTests()">▶ <span class="btn-text d-none d-sm-inline">Ejecutar Test</span></button>
+        </div>
+    </div>
+
+    <!-- MOBILE NAV TABS -->
+    <ul class="nav nav-tabs d-md-none" id="mobileNav">
+        <li class="nav-item">
+            <button class="nav-link active" onclick="switchTab('instructions')" type="button">📖 Instrucciones</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" onclick="switchTab('editor')" type="button">✏️ Editor</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" onclick="switchTab('output')" type="button">📊 Resultado</button>
+        </li>
+    </ul>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-container">
+        <!-- LEFT: INSTRUCTIONS -->
+        <div class="instructions-panel mobile-active" id="instructions">
+            <div class="step-nav" id="stepNav"></div>
+            <div class="instructions-header">
+                <h2 id="lessonTitle">Desafío 1: Limpieza de Datos</h2>
+            </div>
+            <div class="instructions-content" id="instructionsContent"></div>
+            <div style="padding: 15px 20px; border-top: 1px solid var(--gris-medio);">
+                <button class="solution-btn" onclick="showSolution()">🏳️ Solución (Ctrl+S)</button>
+            </div>
+        </div>
+
+        <!-- RIGHT: EDITOR + TESTS -->
+        <div class="editor-panel" id="editorPanel">
+            <div class="editor-header">
+                <span>&lt;&gt; main.py</span>
+                <span id="editorStatus">Python 3</span>
+            </div>
+            <div class="editor-container" id="editorContainer"></div>
+            
+            <div class="output-panel">
+                <div class="output-header">
+                    <span>🖥️ Salida</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="output-clear" onclick="clearOutput()">Limpiar</button>
+                        <button class="next-lesson-btn" id="nextLessonBtn" onclick="goToNextLesson()" disabled>Siguiente lección →</button>
+                    </div>
+                </div>
+                <div class="output-loading" id="outputLoading">
+                    <div class="spinner-sm"></div>
+                    <span id="outputLoadingMsg">Preparando entorno Python...</span>
+                </div>
+                <div class="output-container" id="outputContainer">
+                    <div class="output-welcome">🐻‍❄️ <span>Polars Playground</span> - Salida</div>
+                    <div class="output-welcome" style="color: #666;">Usa print() para ver resultados aquí</div>
+                </div>
+            </div>
+            
+            <div class="test-panel">
+                <div class="test-header">
+                    <span>🧪 Resultados de Tests</span>
+                    <span id="testCount">0/0 tests pasados</span>
+                </div>
+                <div class="test-results" id="testResults">
+                    <div class="test-info">Haz clic en "Ejecutar Test (Ctrl+Enter)" o presiona Ctrl+Enter para validar tu código.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOBILE ACTION BUTTONS -->
+    <div class="d-md-none position-fixed bottom-0 end-0 p-3" style="z-index: 100;display:flex;flex-direction:column;gap:10px;">
+        <button class="btn rounded-circle" onclick="window.open('https://docs.pola.rs/', '_blank')" style="width:48px;height:48px;font-size:1.2rem;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;display:flex;align-items:center;justify-content:center;">📖</button>
+        <button class="btn rounded-circle" onclick="showSolution()" style="width:48px;height:48px;font-size:1.2rem;background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%);color:white;border:none;display:flex;align-items:center;justify-content:center;">💡</button>
+    </div>
+    <button class="d-md-none position-fixed end-0 p-3 polars-btn" onclick="window.open('https://pola.rs/', '_blank')" style="z-index: 100;width:205px;height:205px;border:none;background:transparent;display:none;align-items:center;justify-content:center;bottom:-50px;right:109px;">
+        <img src="oso_polar.webp" alt="Polars" style="width:205px;height:205px;">
+    </button>
+
+    <!-- PYODIDE -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+
+    <!-- MONACO EDITOR -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+
+    <!-- BOOTSTRAP JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- MOBILE TAB SWITCHING -->
+    <script>
+        function switchTab(tab) {
+            var instructions = document.querySelector('.instructions-panel');
+            var editorPanel = document.querySelector('.editor-panel');
+            var editorContainer = document.querySelector('.editor-container');
+            var outputPanel = document.querySelector('.output-panel');
+            var testPanel = document.querySelector('.test-panel');
+            var tabs = document.querySelectorAll('#mobileNav .nav-link');
+            
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            document.body.classList.remove('output-active');
+            document.body.classList.remove('editor-active');
+            
+            if (tab === 'instructions') {
+                tabs[0].classList.add('active');
+                instructions.style.display = 'flex';
+                editorPanel.style.display = 'none';
+                editorPanel.classList.remove('panel-visible');
+            } else if (tab === 'editor') {
+                tabs[1].classList.add('active');
+                instructions.style.display = 'none';
+                editorPanel.style.display = 'flex';
+                editorContainer.style.display = 'block';
+                editorPanel.classList.remove('panel-visible');
+                document.body.classList.add('editor-active');
+                if (window.monacoEditor) window.monacoEditor.layout();
+            } else if (tab === 'output') {
+                tabs[2].classList.add('active');
+                instructions.style.display = 'none';
+                editorPanel.style.display = 'flex';
+                editorPanel.classList.add('panel-visible');
+                document.body.classList.add('output-active');
+                if (window.monacoEditor) window.monacoEditor.layout();
+            }
+        }
+
+        if (window.innerWidth < 768) { document.querySelector('.editor-panel').style.display = 'none'; }
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 768) { document.querySelector('.instructions-panel').style.display = 'flex'; document.querySelector('.editor-panel').style.display = 'flex'; if (window.monacoEditor) window.monacoEditor.layout(); }
+            else { var activeTab = document.querySelector('#mobileNav .nav-link.active'); if (activeTab && activeTab.textContent.includes('Instrucciones')) { document.querySelector('.editor-panel').style.display = 'none'; } else { document.querySelector('.instructions-panel').style.display = 'none'; } }
+        });
+    </script>
+
+    <script>
+        // ==================== STATE ====================
+        let pyodide = null;
+        let editor = null;
+        let currentStep = 0;
+        let completedSteps = [];
+        let cellCounter = 0;
+
+        const STORAGE_KEY = 'polarsDesafioCompleted';
+
+        // ==================== CHALLENGES ====================
+        const lessons = [
+            {
+                id: 1,
+                title: "Limpieza de Datos",
+                instructions: `
+                    <p>Tienes un dataset sucio con múltiples problemas: valores faltantes, duplicados, formatos inconsistentes y tipos de datos incorrectos.</p>
+                    
+                    <h3>Objetivo</h3>
+                    <p>Carga el archivo <code>ventas_sucias.csv</code> y aplica las siguientes transformaciones:</p>
+                    <ol>
+                        <li>Elimina filas duplicadas</li>
+                        <li>Rellena los valores nulos en <code>cantidad</code> con la media</li>
+                        <li>Convierte <code>precio</code> a tipo numérico (contiene strings como "$10.50")</li>
+                        <li>Elimina el signo $ de <code>precio</code> y conviértelo a float</li>
+                        <li>Normaliza los nombres de productos a mayúsculas</li>
+                        <li>Guarda el resultado en <code>df_limpio</code></li>
+                    </ol>
+                    
+                    <h3>Datos originales</h3>
+                    <pre><code>producto,cantidad,precio,fecha
+laptop,5,$999.99,2024-01-15
+mouse,,29.99,2024-01-16
+laptop,5,$999.99,2024-01-15
+teclado,15,$79.99,2024-01-17
+mouse,20,$29.99,
+monitor,8,$449.99,2024-01-19
+,10,$199.99,2024-01-20
+teclado,15,$79.99,2024-01-17</code></pre>
+                `,
+                seedCode: `import polars as pl\nimport io\n\ncsv_data = """producto,cantidad,precio,fecha\nlaptop,5,$999.99,2024-01-15\nmouse,,29.99,2024-01-16\nlaptop,5,$999.99,2024-01-15\nteclado,15,$79.99,2024-01-17\nmouse,20,$29.99,\nmonitor,8,$449.99,2024-01-19\n,10,$199.99,2024-01-20\nteclado,15,$79.99,2024-01-17"""\n\nwith open('ventas_sucias.csv', 'w') as f:\n    f.write(csv_data)\n\ndf = pl.read_csv('ventas_sucias.csv')\n\n# Escribe tu código aquí`,
+                solution: `import polars as pl\nimport io\n\ncsv_data = """producto,cantidad,precio,fecha\nlaptop,5,$999.99,2024-01-15\nmouse,,29.99,2024-01-16\nlaptop,5,$999.99,2024-01-15\nteclado,15,$79.99,2024-01-17\nmouse,20,$29.99,\nmonitor,8,$449.99,2024-01-19\n,10,$199.99,2024-01-20\nteclado,15,$79.99,2024-01-17"""\n\nwith open('ventas_sucias.csv', 'w') as f:\n    f.write(csv_data)\n\ndf = pl.read_csv('ventas_sucias.csv')\n\ndf_limpio = df.unique()\ndf_limpio = df_limpio.filter(pl.col('producto').is_not_null())\ndf_limpio = df_limpio.with_columns(\n    pl.col('cantidad').cast(pl.Float64).fill_null(pl.col('cantidad').mean())\n)\ndf_limpio = df_limpio.with_columns(\n    pl.col('precio').str.replace_all('\\$', '').cast(pl.Float64)\n)\ndf_limpio = df_limpio.with_columns(\n    pl.col('producto').str.to_uppercase()\n)\nprint(df_limpio)`,
+                tests: [
+                    {
+                        name: "df_limpio existe",
+                        code: ``,
+                        validation: `'df_limpio' in dir()`,
+                        error: "Debes crear la variable 'df_limpio'"
+                    },
+                    {
+                        name: "Sin duplicados",
+                        code: ``,
+                        validation: `len(df_limpio) == 5`,
+                        error: "df_limpio debe tener 5 filas (sin duplicados ni vacíos)"
+                    },
+                    {
+                        name: "Productos en mayúsculas",
+                        code: ``,
+                        validation: `df_limpio['producto'].str.to_uppercase().to_list() == df_limpio['producto'].to_list()`,
+                        error: "Todos los productos deben estar en mayúsculas"
+                    },
+                    {
+                        name: "Precio es float",
+                        code: ``,
+                        validation: `df_limpio['precio'].dtype == pl.Float64`,
+                        error: "La columna 'precio' debe ser float"
+                    },
+                    {
+                        name: "Sin valores nulos en cantidad",
+                        code: ``,
+                        validation: `df_limpio['cantidad'].null_count() == 0`,
+                        error: "No debe haber valores nulos en 'cantidad'"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                title: "Análisis de Ventas",
+                instructions: `
+                    <p>Trabajas como analista de una empresa de tecnología. Debes generar un reporte ejecutivo de ventas.</p>
+                    
+                    <h3>Dataset</h3>
+                    <p>El archivo <code>ventas_tech.csv</code> contiene registros de ventas con columnas: producto, región, vendedor, unidades, precio_unitario, fecha.</p>
+                    
+                    <h3>Objetivo</h3>
+                    <p>Genera las siguientes métricas:</p>
+                    <ol>
+                        <li><code>total_ventas</code>: DataFrame con el total de ventas por región (unidades × precio_unitario)</li>
+                        <li><code>top_vendedor</code>: Nombre del vendedor con más unidades vendidas</li>
+                        <li><code>resumen_producto</code>: DataFrame con promedio, mediana y desviación estándar de unidades por producto</li>
+                    </ol>
+                    
+                    <h3>Datos</h3>
+                    <pre><code>producto,región,vendedor,unidades,precio_unitario,fecha
+Laptop,Norte,Ana,3,999.99,2024-01-15
+Mouse,Sur,Carlos,15,29.99,2024-01-16
+Teclado,Norte,Ana,8,79.99,2024-01-17
+Monitor,Este,Pedro,2,449.99,2024-01-18
+Mouse,Norte,Carlos,10,29.99,2024-01-19
+Laptop,Sur,Ana,1,999.99,2024-01-20
+Teclado,Este,Pedro,5,79.99,2024-01-21
+Monitor,Norte,Ana,3,449.99,2024-01-22
+Mouse,Este,Carlos,8,29.99,2024-01-23
+Laptop,Norte,Pedro,2,999.99,2024-01-24</code></pre>
+                `,
+                seedCode: `import polars as pl\nimport io\n\ncsv_data = """producto,región,vendedor,unidades,precio_unitario,fecha\nLaptop,Norte,Ana,3,999.99,2024-01-15\nMouse,Sur,Carlos,15,29.99,2024-01-16\nTeclado,Norte,Ana,8,79.99,2024-01-17\nMonitor,Este,Pedro,2,449.99,2024-01-18\nMouse,Norte,Carlos,10,29.99,2024-01-19\nLaptop,Sur,Ana,1,999.99,2024-01-20\nTeclado,Este,Pedro,5,79.99,2024-01-21\nMonitor,Norte,Ana,3,449.99,2024-01-22\nMouse,Este,Carlos,8,29.99,2024-01-23\nLaptop,Norte,Pedro,2,999.99,2024-01-24"""\n\nwith open('ventas_tech.csv', 'w') as f:\n    f.write(csv_data)\n\ndf = pl.read_csv('ventas_tech.csv')\n\n# Escribe tu código aquí`,
+                solution: `import polars as pl\nimport io\n\ncsv_data = """producto,región,vendedor,unidades,precio_unitario,fecha\nLaptop,Norte,Ana,3,999.99,2024-01-15\nMouse,Sur,Carlos,15,29.99,2024-01-16\nTeclado,Norte,Ana,8,79.99,2024-01-17\nMonitor,Este,Pedro,2,449.99,2024-01-18\nMouse,Norte,Carlos,10,29.99,2024-01-19\nLaptop,Sur,Ana,1,999.99,2024-01-20\nTeclado,Este,Pedro,5,79.99,2024-01-21\nMonitor,Norte,Ana,3,449.99,2024-01-22\nMouse,Este,Carlos,8,29.99,2024-01-23\nLaptop,Norte,Pedro,2,999.99,2024-01-24"""\n\nwith open('ventas_tech.csv', 'w') as f:\n    f.write(csv_data)\n\ndf = pl.read_csv('ventas_tech.csv')\n\ndf_con_total = df.with_columns(\n    (pl.col('unidades') * pl.col('precio_unitario')).alias('total')\n)\n\ntotal_ventas = df_con_total.group_by('región').agg(\n    pl.col('total').sum()\n).sort('región')\n\ntop_vendedor = df_con_total.group_by('vendedor').agg(\n    pl.col('unidades').sum().alias('total_unidades')\n).sort('total_unidades', descending=True).head(1)['vendedor'][0]\n\nresumen_producto = df_con_total.group_by('producto').agg(\n    pl.col('unidades').mean().alias('mean'),\n    pl.col('unidades').median().alias('median'),\n    pl.col('unidades').std().alias('std')\n).sort('producto')\n\nprint("Ventas por región:")\nprint(total_ventas)\nprint(f"\\nTop vendedor: {top_vendedor}")\nprint("\\nResumen por producto:")\nprint(resumen_producto)`,
+                tests: [
+                    {
+                        name: "total_ventas existe",
+                        code: ``,
+                        validation: `'total_ventas' in dir()`,
+                        error: "Debes crear 'total_ventas'"
+                    },
+                    {
+                        name: "total_ventas tiene 3 regiones",
+                        code: ``,
+                        validation: `len(total_ventas) == 3`,
+                        error: "total_ventas debe tener 3 filas (3 regiones)"
+                    },
+                    {
+                        name: "top_vendedor es Carlos",
+                        code: ``,
+                        validation: `top_vendedor == 'Carlos'`,
+                        error: "El top vendedor debe ser 'Carlos' (33 unidades)"
+                    },
+                    {
+                        name: "resumen_producto tiene 4 productos",
+                        code: ``,
+                        validation: `len(resumen_producto) == 4`,
+                        error: "resumen_producto debe tener 4 filas (Laptop, Mouse, Teclado, Monitor)"
+                    },
+                    {
+                        name: "resumen tiene columnas correctas",
+                        code: ``,
+                        validation: `set(['mean', 'median', 'std']).issubset(resumen_producto.columns)`,
+                        error: "resumen_producto debe tener columnas 'mean', 'median', 'std'"
+                    }
+                ]
+            },
+            {
+                id: 3,
+                title: "Pipeline Completo",
+                instructions: `
+                    <p>Este es un desafío integral. Debes construir un pipeline completo de procesamiento de datos que incluye lectura, limpieza, transformación, merge y agregación.</p>
+                    
+                    <h3>Dataset</h3>
+                    <p>Tienes 2 archivos:</p>
+                    <ul>
+                        <li><code>productos.csv</code>: id, nombre, categoría, precio</li>
+                        <li><code>pedidos.csv</code>: id_pedido, producto_id, cantidad, cliente, fecha</li>
+                    </ul>
+                    
+                    <h3>Objetivo</h3>
+                    <ol>
+                        <li>Carga ambos archivos</li>
+                        <li>Haz un join de pedidos con productos (usando producto_id = id)</li>
+                        <li>Crea columna <code>total_pedido</code> = cantidad × precio</li>
+                        <li>Crea <code>reporte_ventas</code>: DataFrame con total de ventas por categoría</li>
+                        <li>Crea <code>top_clientes</code>: top 3 clientes que más gastaron</li>
+                    </ol>
+                    
+                    <h3>Datos</h3>
+                    <pre><code>productos.csv:
+id,nombre,categoría,precio
+1,Laptop,Tech,999.99
+2,Mouse,Tech,29.99
+3,Camisa,Ropa,40.00
+4,Pantalón,Ropa,80.00
+5,Zapatos,Calzado,120.00
+
+pedidos.csv:
+id_pedido,producto_id,cantidad,cliente,fecha
+101,1,2,María,2024-01-15
+102,3,3,Carlos,2024-01-16
+103,2,5,María,2024-01-17
+104,4,1,Ana,2024-01-18
+105,5,2,Carlos,2024-01-19
+106,1,1,Ana,2024-01-20
+107,3,4,María,2024-01-21</code></pre>
+                `,
+                seedCode: `import polars as pl\nimport io\n\nproductos_csv = """id,nombre,categoría,precio\n1,Laptop,Tech,999.99\n2,Mouse,Tech,29.99\n3,Camisa,Ropa,40.00\n4,Pantalón,Ropa,80.00\n5,Zapatos,Calzado,120.00"""\n\npedidos_csv = """id_pedido,producto_id,cantidad,cliente,fecha\n101,1,2,María,2024-01-15\n102,3,3,Carlos,2024-01-16\n103,2,5,María,2024-01-17\n104,4,1,Ana,2024-01-18\n105,5,2,Carlos,2024-01-19\n106,1,1,Ana,2024-01-20\n107,3,4,María,2024-01-21"""\n\nwith open('productos.csv', 'w') as f:\n    f.write(productos_csv)\nwith open('pedidos.csv', 'w') as f:\n    f.write(pedidos_csv)\n\ndf_prod = pl.read_csv('productos.csv')\ndf_ped = pl.read_csv('pedidos.csv')\n\n# Escribe tu código aquí`,
+                solution: `import polars as pl\nimport io\n\nproductos_csv = """id,nombre,categoría,precio\n1,Laptop,Tech,999.99\n2,Mouse,Tech,29.99\n3,Camisa,Ropa,40.00\n4,Pantalón,Ropa,80.00\n5,Zapatos,Calzado,120.00"""\n\npedidos_csv = """id_pedido,producto_id,cantidad,cliente,fecha\n101,1,2,María,2024-01-15\n102,3,3,Carlos,2024-01-16\n103,2,5,María,2024-01-17\n104,4,1,Ana,2024-01-18\n105,5,2,Carlos,2024-01-19\n106,1,1,Ana,2024-01-20\n107,3,4,María,2024-01-21"""\n\nwith open('productos.csv', 'w') as f:\n    f.write(productos_csv)\nwith open('pedidos.csv', 'w') as f:\n    f.write(pedidos_csv)\n\ndf_prod = pl.read_csv('productos.csv')\ndf_ped = pl.read_csv('pedidos.csv')\n\ndf_completo = df_ped.join(df_prod, left_on='producto_id', right_on='id')\ndf_completo = df_completo.with_columns(\n    (pl.col('cantidad') * pl.col('precio')).alias('total_pedido')\n)\n\nreporte_ventas = df_completo.group_by('categoría').agg(\n    pl.col('total_pedido').sum().alias('total_ventas')\n).sort('categoría')\n\ntop_clientes = df_completo.group_by('cliente').agg(\n    pl.col('total_pedido').sum().alias('total_gastado')\n).sort('total_gastado', descending=True).head(3)\n\nprint("Reporte de ventas por categoría:")\nprint(reporte_ventas)\nprint("\\nTop 3 clientes:")\nprint(top_clientes)`,
+                tests: [
+                    {
+                        name: "reporte_ventas existe",
+                        code: ``,
+                        validation: `'reporte_ventas' in dir()`,
+                        error: "Debes crear 'reporte_ventas'"
+                    },
+                    {
+                        name: "reporte_ventas tiene 3 categorías",
+                        code: ``,
+                        validation: `len(reporte_ventas) == 3`,
+                        error: "reporte_ventas debe tener 3 filas (3 categorías)"
+                    },
+                    {
+                        name: "top_clientes existe",
+                        code: ``,
+                        validation: `'top_clientes' in dir()`,
+                        error: "Debes crear 'top_clientes'"
+                    },
+                    {
+                        name: "top_clientes tiene 3 filas",
+                        code: ``,
+                        validation: `len(top_clientes) == 3`,
+                        error: "top_clientes debe tener 3 filas"
+                    },
+                    {
+                        name: "María es top client",
+                        code: ``,
+                        validation: `top_clientes.row(0)[0] == 'María'`,
+                        error: "María debe ser la top client (más gastado)"
+                    }
+                ]
+            }
+        ];
+
+        // ==================== PYODIDE ====================
+        async function initPyodide() {
+            const loadingEl = document.getElementById('outputLoading');
+            const msgEl = document.getElementById('outputLoadingMsg');
+            
+            try {
+                msgEl.textContent = 'Preparando Pyodide...';
+                const pyodideStart = performance.now();
+                const pyodideInterval = setInterval(() => {
+                    const elapsed = (performance.now() - pyodideStart) / 1000;
+                    msgEl.textContent = `Preparando Pyodide... (${elapsed.toFixed(0)}s)`;
+                }, 1000);
+                
+                pyodide = await loadPyodide({
+                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/"
+                });
+                
+                clearInterval(pyodideInterval);
+                const pyodideTime = ((performance.now() - pyodideStart) / 1000).toFixed(1);
+                msgEl.textContent = `Pyodide listo (${pyodideTime}s). Preparando polars...`;
+                
+                const polarsStart = performance.now();
+                const polarsInterval = setInterval(() => {
+                    const elapsed = (performance.now() - polarsStart) / 1000;
+                    msgEl.textContent = `Preparando polars... (${elapsed.toFixed(0)}s)`;
+                }, 1000);
+                
+                await pyodide.loadPackage("polars");
+                pyodide.runPython(`import polars as pl; pl.Config.set_fmt_str_lengths(100)`);
+                
+                clearInterval(polarsInterval);
+                const polarsTime = ((performance.now() - polarsStart) / 1000).toFixed(1);
+                
+                msgEl.textContent = `¡Listo! (Pyodide: ${pyodideTime}s, Polars: ${polarsTime}s)`;
+                loadingEl.style.background = 'rgba(102,126,234,0.15)';
+                setTimeout(() => { loadingEl.classList.add('hidden'); }, 2000);
+            } catch (e) {
+                console.error("Error loading Pyodide/polars:", e);
+                msgEl.textContent = "Error: " + e.message;
+                loadingEl.style.background = 'rgba(231,76,60,0.15)';
+                loadingEl.querySelector('.spinner-sm').style.borderTopColor = '#e74c3c';
+            }
+        }
+
+        // ==================== OUTPUT PANEL ====================
+        function clearOutput() {
+            const container = document.getElementById('outputContainer');
+            container.innerHTML = '';
+            cellCounter = 0;
+        }
+        
+        function writeToOutput(text, isError = false) {
+            const container = document.getElementById('outputContainer');
+            
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                if (line.trim() === '' && !isError) return;
+                cellCounter++;
+                const cell = document.createElement('div');
+                cell.className = 'output-cell';
+                
+                const prompt = document.createElement('div');
+                prompt.className = 'output-cell-prompt';
+                prompt.textContent = isError ? `Error:` : `Out [${cellCounter}]:`;
+                
+                const content = document.createElement('div');
+                content.className = 'output-cell-text' + (isError ? ' error' : '');
+                content.textContent = line;
+                
+                cell.appendChild(prompt);
+                cell.appendChild(content);
+                container.appendChild(cell);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function writeRichOutput(name, html) {
+            const container = document.getElementById('outputContainer');
+            const cell = document.createElement('div');
+            cell.className = 'output-cell';
+            cell.innerHTML = `<div class="output-cell-prompt" style="color:#61afef;font-size:0.8rem;margin-bottom:2px;font-weight:600;">${name}</div><div class="output-cell-html">${html}</div>`;
+            container.appendChild(cell);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // ==================== CAPTURE STDOUT ====================
+        function captureStdout(pyodide, code) {
+            let output = [];
+            
+            pyodide.setStdout({
+                batched: (text) => output.push(text)
+            });
+            pyodide.setStderr({
+                batched: (text) => { if (!/Warning|DeprecationWarning|FutureWarning|DeprecationWarning:/i.test(text)) output.push('\x1b[31m' + text + '\x1b[0m'); }
+            });
+            
+            try {
+                pyodide.runPython(`
+import polars as _pl
+import sys as _sys
+import warnings
+warnings.filterwarnings('ignore')
+                `);
+            } catch (e) {}
+
+            try {
+                pyodide.runPython(code);
+            } catch (error) {
+                output.push('\x1b[31m' + error.message + '\x1b[0m');
+            }
+
+            const textOutput = output.join('');
+
+            let richOutputs = [];
+            try {
+                richOutputs = pyodide.runPython(`
+_rich = []
+for _n, _o in list(globals().items()):
+    if _n.startswith('_'):
+        continue
+    if isinstance(_o, _pl.DataFrame):
+        try:
+            _d = _o.to_dict()
+            _cols = list(_d.keys())
+            _rows = list(zip(*[_d[c] for c in _cols]))
+            _rich.append((_n, _cols, [list(r) for r in _rows]))
+        except Exception:
+            pass
+_rich
+                `);
+            } catch (e) {}
+
+            if (richOutputs && richOutputs.length > 0) {
+                richOutputs.forEach(item => {
+                    if (item && item.length === 3) {
+                        const [name, cols, rows] = item;
+                        let html = '<table><thead><tr>';
+                        cols.forEach(c => { html += `<th>${c}</th>`; });
+                        html += '</tr></thead><tbody>';
+                        rows.forEach(row => {
+                            html += '<tr>';
+                            row.forEach(val => { html += `<td>${val === null ? 'null' : val}</td>`; });
+                            html += '</tr>';
+                        });
+                        html += '</tbody></table>';
+                        writeRichOutput(name, html);
+                    }
+                });
+            } else if (textOutput.trim()) {
+                writeToOutput(textOutput);
+            }
+            
+            pyodide.setStdout({
+                batched: (text) => { writeToOutput(text); }
+            });
+            pyodide.setStderr({
+                batched: (text) => { writeToOutput(text, true); }
+            });
+            
+            return output.join('');
+        }
+
+        // ==================== MONACO EDITOR ====================
+        function initMonacoEditor() {
+            require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+            
+            require(['vs/editor/editor.main'], function () {
+                editor = monaco.editor.create(document.getElementById('editorContainer'), {
+                    value: '',
+                    language: 'python',
+                    theme: 'vs-dark',
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 4,
+                    wordWrap: 'on'
+                });
+                window.monacoEditor = editor;
+                
+                loadLesson(currentStep);
+            });
+        }
+
+        // ==================== LESSON MANAGEMENT ====================
+        function loadLesson(index) {
+            currentStep = index;
+            const lesson = lessons[index];
+            
+            document.getElementById('lessonTitle').textContent = `Desafío ${lesson.id}: ${lesson.title}`;
+            document.getElementById('instructionsContent').innerHTML = lesson.instructions;
+            document.getElementById('stepInfo').textContent = `Desafío ${lesson.id} de ${lessons.length}`;
+            
+            if (editor) {
+                editor.setValue(lesson.seedCode);
+            }
+            
+            document.getElementById('testResults').innerHTML = '<div class="test-info">Haz clic en "Ejecutar Test (Ctrl+Enter)" o presiona Ctrl+Enter para validar tu código.</div>';
+            document.getElementById('testCount').textContent = '0/0 tests pasados';
+            
+            clearOutput();
+            
+            if (window.innerWidth <= 600) {
+                document.querySelector('.output-panel').classList.remove('visible');
+                document.querySelector('.test-panel').classList.remove('visible');
+            }
+            
+            document.getElementById('nextLessonBtn').disabled = true;
+            
+            updateStepNav();
+        }
+
+        function updateStepNav() {
+            const nav = document.getElementById('stepNav');
+            nav.innerHTML = '';
+            
+            lessons.forEach((lesson, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'step-dot';
+                if (index === currentStep) dot.classList.add('active');
+                if (completedSteps.includes(index)) dot.classList.add('completed');
+                dot.textContent = index + 1;
+                dot.onclick = () => loadLesson(index);
+                nav.appendChild(dot);
+            });
+        }
+
+        function goToNextLesson() {
+            if (currentStep < lessons.length - 1) {
+                document.getElementById('nextLessonBtn').disabled = true;
+                loadLesson(currentStep + 1);
+            }
+        }
+
+        // ==================== TEST EXECUTION ====================
+        async function runTests() {
+            if (!pyodide || !editor) {
+                alert('El entorno aún se está cargando. Espera un momento.');
+                return;
+            }
+            
+            const lesson = lessons[currentStep];
+            const userCode = editor.getValue();
+            const resultsDiv = document.getElementById('testResults');
+            const testCount = document.getElementById('testCount');
+            
+            resultsDiv.innerHTML = '<div class="test-info">Ejecutando tests...</div>';
+            clearOutput();
+            pyodide.setStdout({ batched: (text) => {} });
+            pyodide.setStderr({ batched: (text) => {} });
+            
+            let initialError = null;
+            const initialOutput = captureStdout(pyodide, userCode);
+            if (initialOutput && initialOutput.includes('\x1b[31m')) { initialError = initialOutput.replace(/\x1b\[31m/g, '').replace(/\x1b\[0m/g, '').trim(); }
+            pyodide.setStdout({ batched: (text) => { writeToOutput(text); } });
+            pyodide.setStderr({ batched: (text) => { writeToOutput(text, true); } });
+            
+            let passed = 0;
+            let total = lesson.tests.length;
+            let allPassed = true;
+            let results = [];
+            
+            if (initialError) { results.push(`<div class="test-fail" style="margin-bottom: 10px;">❌ Error detectado: ${initialError}</div>`); }
+            
+            for (let i = 0; i < lesson.tests.length; i++) {
+                const test = lesson.tests[i];
+                try {
+                    let silentOutput = [];
+                    pyodide.setStdout({ batched: (text) => silentOutput.push(text) });
+                    pyodide.setStderr({ batched: (text) => silentOutput.push(text) });
+                    
+                    pyodide.runPython(userCode);
+                    const result = pyodide.runPython(test.validation);
+                    
+                    pyodide.setStdout({ batched: (text) => { writeToOutput(text); } });
+                    pyodide.setStderr({ batched: (text) => { writeToOutput(text, true); } });
+                    
+                    if (result) {
+                        passed++;
+                        results.push(`<div class="test-pass">✅ Test ${i + 1}: ${test.name} - PASADO</div>`);
+                    } else {
+                        allPassed = false;
+                        results.push(`<div class="test-fail">❌ Test ${i + 1}: ${test.name} - FALLIDO</div>`);
+                        results.push(`<div class="test-fail" style="margin-left: 20px;">${test.error}</div>`);
+                    }
+                } catch (error) {
+                    allPassed = false;
+                    results.push(`<div class="test-fail">❌ Test ${i + 1}: ${test.name} - FALLIDO</div>`);
+                    results.push(`<div class="test-fail" style="margin-left: 20px;">${test.error}</div>`);
+                    
+                    pyodide.setStdout({ batched: (text) => { writeToOutput(text); } });
+                    pyodide.setStderr({ batched: (text) => { writeToOutput(text, true); } });
+                }
+            }
+            
+            resultsDiv.innerHTML = results.join('');
+            testCount.textContent = `${passed}/${total} tests pasados`;
+            
+            if (allPassed) {
+                if (window.innerWidth <= 600) {
+                    document.querySelector('.output-panel').classList.add('visible');
+                }
+                resultsDiv.innerHTML += `<div class="test-pass" style="margin-top: 15px; font-size: 1.1em;">🎉 ¡Todos los tests pasaron! Has completado este desafío.</div>`;
+                
+                if (!completedSteps.includes(currentStep)) {
+                    completedSteps.push(currentStep);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(completedSteps));
+                    updateStepNav();
+                }
+                
+                if (currentStep < lessons.length - 1) {
+                    document.getElementById('nextLessonBtn').disabled = false;
+                }
+            }
+        }
+
+        // ==================== MODAL ====================
+        function showModal(errorMsg) {
+            const modal = document.getElementById('errorModal');
+            const details = document.getElementById('modalDetails');
+            details.textContent = '';
+            modal.classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('errorModal').classList.remove('active');
+        }
+        
+        document.getElementById('errorModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ==================== SOLUTION ====================
+        function showSolution() {
+            const lesson = lessons[currentStep];
+            if (lesson.solution && editor) {
+                if (confirm('¿Ver la solución? Se reemplazará tu código actual.')) {
+                    editor.setValue(lesson.solution);
+                }
+            }
+        }
+
+        // ==================== RESET ====================
+        function resetCode() {
+            if (editor && confirm('¿Estás seguro de que quieres reiniciar el código?')) {
+                editor.setValue(lessons[currentStep].seedCode);
+                document.getElementById('testResults').innerHTML = '<div class="test-info">Código reiniciado.</div>';
+                clearOutput();
+            }
+        }
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                runTests();
+            }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                showSolution();
+            }
+        });
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            completedSteps = saved;
+            
+            initMonacoEditor();
+            initPyodide();
+        });
+    </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}</script>
+</body>
+</html>

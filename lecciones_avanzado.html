@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecciones Avanzado - Polars Playground</title>
+    <meta name="description" content="Playground interactivo de Polars nivel avanzado. Window functions, SQL, rolling windows y más.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/webp" href="./oso_polar.webp">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --azul: #0a0a23; --rojo: #e74c3c; --verde: #00d4aa; --morado: #667eea; --morado-claro: #764ba2;
+            --naranja: #f39c12; --gris-claro: #f8f9fa; --gris-medio: #e9ecef; --texto: #333; --blanco: #fff;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #E6FAFA; color: var(--texto); height: 100vh; overflow: hidden; }
+        .header { background: var(--azul); color: var(--blanco); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; height: 50px; }
+        .header-logo { font-size: 1.2rem; font-weight: bold; color: white; }
+        .header-steps { font-size: 0.9rem; opacity: 0.8; }
+        .header-buttons { display: flex; gap: 10px; }
+        .main-container { display: flex; height: calc(100vh - 50px); }
+        .instructions-panel { width: 40%; min-width: 300px; background: var(--blanco); border-right: 2px solid var(--gris-medio); display: flex; flex-direction: column; overflow: hidden; }
+        .instructions-header { padding: 15px 20px; border-bottom: 1px solid var(--gris-medio); background: var(--gris-claro); }
+        .instructions-header h2 { font-size: 1.1rem; color: var(--azul); }
+        .instructions-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .instructions-content h3 { color: var(--rojo); margin: 15px 0 10px; font-size: 1rem; }
+        .instructions-content p { line-height: 1.6; margin-bottom: 10px; }
+        .instructions-content code { background: #f1f3f5; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.9em; }
+        .instructions-content pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+        .instructions-content pre code { background: none; padding: 0; color: inherit; }
+        .editor-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .editor-header { padding: 10px 15px; background: #282c34; color: #abb2bf; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+        .editor-container { flex: 1; overflow: hidden; }
+        .output-panel { height: 220px; min-height: 150px; background: #1e1e1e; border-top: 2px solid #444; display: flex; flex-direction: column; }
+        .output-header { padding: 8px 15px; background: #252526; color: #ccc; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+        .output-header span:first-child { display: flex; align-items: center; gap: 8px; }
+        .output-clear { background: none; border: none; color: #888; cursor: pointer; font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; }
+        .output-clear:hover { background: #3c3c3c; color: #fff; }
+        .next-lesson-btn { background: var(--rojo); color: var(--blanco); border: none; cursor: pointer; font-size: 0.8rem; padding: 4px 12px; border-radius: 4px; font-weight: 600; transition: all 0.2s; }
+        .next-lesson-btn:disabled { background: #3c3c3c; color: #666; cursor: not-allowed; }
+        .next-lesson-btn:not(:disabled):hover { background: #c0392b; }
+        .next-lesson-btn:not(:disabled) { animation: glow 1.5s ease-in-out infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 5px var(--rojo), 0 0 10px var(--rojo); } 50% { box-shadow: 0 0 15px var(--rojo), 0 0 25px var(--rojo); } }
+        .output-container { flex: 1; overflow-y: auto; padding: 10px 15px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.85rem; }
+        .output-cell { margin-bottom: 10px; border-left: 3px solid var(--rojo); padding-left: 10px; }
+        .output-cell-prompt { color: #61afef; font-size: 0.8rem; margin-bottom: 2px; }
+        .output-cell-text { color: #abb2bf; white-space: pre-wrap; word-wrap: break-word; }
+        .output-cell-text.error { color: #e06c75; }
+        .output-cell-html { color: #abb2bf; overflow-x: auto; }
+        .output-cell-html table { border-collapse: collapse !important; width: auto !important; font-size: 0.85rem; margin: 5px 0; font-family: 'Consolas', monospace; }
+        .output-cell-html th, .output-cell-html td { border: 1px solid #444 !important; padding: 6px 10px !important; text-align: left !important; white-space: nowrap; }
+        .output-cell-html th { background: #2c2c2c !important; font-weight: 600; color: #abb2bf; }
+        .output-cell-html tr:nth-child(even) { background: #252526 !important; }
+        .output-cell-html tr:nth-child(odd) { background: #1e1e1e !important; }
+        .output-welcome { color: #61afef; font-size: 0.85rem; margin-bottom: 2px; }
+        .output-welcome span { color: #98c379; }
+        .test-panel { height: 150px; min-height: 100px; background: #1e1e1e; border-top: 2px solid #444; display: flex; flex-direction: column; }
+        .test-header { padding: 8px 15px; background: #252526; color: #ccc; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+        .test-results { flex: 1; overflow-y: auto; padding: 10px 15px; font-family: 'Consolas', monospace; font-size: 0.85rem; }
+        .test-pass { color: #98c379; }
+        .test-fail { color: #e06c75; }
+        .test-info { color: #61afef; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+        .btn-primary { background: var(--rojo); color: white; }
+        .btn-primary:hover { background: #c0392b; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .loading-overlay { display: none; }
+        .output-loading {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; background: rgba(231,76,60,0.1);
+            border-bottom: 1px solid rgba(231,76,60,0.2);
+            font-size: 0.85rem; color: var(--rojo);
+        }
+        .output-loading.hidden { display: none; }
+        .output-loading .spinner-sm {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(231,76,60,0.3);
+            border-top-color: var(--rojo);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .step-nav { display: flex; gap: 5px; padding: 10px 15px; background: var(--gris-claro); border-bottom: 1px solid var(--gris-medio); overflow-x: auto; }
+        .step-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--gris-medio); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .step-dot.active { background: var(--rojo); color: white; }
+        .step-dot.completed { background: var(--verde); color: var(--azul); }
+        .step-dot:hover { transform: scale(1.1); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: transparent; display: none; align-items: center; justify-content: center; z-index: 10000; pointer-events: none; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--blanco); border-radius: 12px; padding: 30px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); animation: modalIn 0.3s ease; pointer-events: auto; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal-icon { font-size: 3rem; margin-bottom: 15px; }
+        .modal-title { font-size: 1.2rem; color: var(--azul); margin-bottom: 10px; font-weight: 600; }
+        .modal-message { color: #666; line-height: 1.5; margin-bottom: 20px; }
+        .modal-details { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 20px; text-align: left; font-family: 'Consolas', monospace; font-size: 0.8rem; color: #e06c75; max-height: 100px; overflow-y: auto; }
+        .modal-btn { padding: 10px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 500; background: var(--rojo); color: white; transition: all 0.2s; }
+        .modal-btn:hover { background: #c0392b; }
+        .solution-btn { width: 100%; padding: 12px; margin-top: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .solution-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4); }
+        .guide-link { display: block; text-align: center; color: var(--rojo); font-size: 0.85rem; text-decoration: none; padding: 8px; margin-bottom: 5px; border-radius: 6px; transition: all 0.2s; cursor: pointer; }
+        .guide-link:hover { background: rgba(231, 76, 60, 0.1); }
+        .guide-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 10001; padding: 20px; }
+        .guide-modal-overlay.active { display: flex; }
+        .guide-modal { background: var(--blanco); border-radius: 12px; width: 100%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; animation: modalIn 0.3s ease; }
+        .guide-modal-header { padding: 20px 25px; border-bottom: 1px solid var(--gris-medio); display: flex; align-items: center; justify-content: space-between; }
+        .guide-modal-header h2 { font-size: 1.3rem; color: var(--rojo); margin: 0; }
+        .guide-close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; padding: 5px; line-height: 1; }
+        .guide-close-btn:hover { color: #333; }
+        .guide-modal-content { flex: 1; overflow-y: auto; padding: 25px; }
+        .guide-section { margin-bottom: 25px; padding-bottom: 25px; border-bottom: 1px solid var(--gris-medio); }
+        .guide-section:last-child { border-bottom: none; margin-bottom: 0; }
+        .guide-section h3 { color: var(--rojo); font-size: 1.1rem; margin-bottom: 10px; }
+        .guide-section p { color: #555; line-height: 1.6; margin-bottom: 10px; }
+        .guide-section pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0; font-size: 0.85rem; }
+        .guide-section code { font-family: 'Consolas', monospace; }
+        @media (max-width: 991px) { .instructions-panel { max-height: 40vh; min-width: unset; width: 100%; border-right: none; border-bottom: 2px solid var(--gris-medio); } .editor-panel { min-height: 60vh; } .main-container { flex-direction: column; overflow-y: auto; } }
+        @media (max-width: 767px) { body { overflow: auto; height: auto; } .header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; } #mobileNav { top: 65px; } .header-steps { display: none !important; } .header-buttons .btn-text { display: none; } .header-buttons .btn { width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 1rem; transform: translateX(200vw); transition: transform 0.4s ease; } .header-buttons .volver-btn { transform: translateX(90px) !important; } body.output-active .header-buttons .volver-btn, body.editor-active .header-buttons .volver-btn { transform: translateX(0) !important; } body.output-active .header-buttons .btn, body.editor-active .header-buttons .btn { transform: translateX(0); } .instructions-panel { max-height: none; height: auto; border-right: none; } .main-container { height: auto; overflow-y: auto; }         .guide-link, .solution-btn { display: none !important; } .d-md-none.position-fixed.bottom-0 { bottom: 185px !important; transition: transform 0.3s ease; } body.output-active .d-md-none.position-fixed.bottom-0 { transform: translateX(calc(100% + 60px)); } #mobileNav { position: fixed; top: 50px; left: 0; right: 0; z-index: 999; } .main-container { margin-top: 92px; } .editor-panel { display: flex; flex-direction: column; height: 665px; overflow: hidden; position: relative; } .editor-container { min-height: 400px; height: 50vh; } .output-panel { position: absolute; bottom: 50%; left: 0; right: 0; height: 50%; transform: translateY(100%); transition: transform 0.4s ease; z-index: 10; } .test-panel { position: absolute; bottom: 0; left: 0; right: 0; height: 50%; transform: translateY(100%); transition: transform 0.4s ease; z-index: 11; }             .panel-visible .output-panel, .panel-visible .test-panel { transform: translateY(0); }
+            .polars-btn { }
+            body.output-active .polars-btn, body.editor-active .polars-btn { display: flex !important; bottom: -50px !important; right: 109px !important; width: 205px !important; height: 205px !important; opacity: 0.5; }
+        }
+        #mobileNav { background: var(--azul); }
+        #mobileNav .nav-link { color: rgba(255,255,255,0.7); border: none; font-size: 0.9rem; padding: 8px 16px; }
+        #mobileNav .nav-link.active { color: var(--rojo); background: rgba(255,255,255,0.05); border-bottom: 2px solid var(--rojo); }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay" id="errorModal">
+        <div class="modal">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title">Revisa bien tu código</div>
+            <div class="modal-message">Algo no está bien escrito. Revisa la sintaxis y vuelve a intentar.</div>
+            <div class="modal-details" id="modalDetails"></div>
+            <button class="modal-btn" onclick="closeModal()">Entendido</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <a href="index.html" class="header-logo" style="text-decoration:none;"><img src="oso_polar.webp" alt="Logo Polars Playground" style="height:1.2em;vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);"> Polars Playground <span style="color: var(--rojo);">- Nivel Avanzado</span></a>
+        <div class="header-steps d-none d-sm-block" id="stepInfo">Lección 1 de 13</div>
+        <div class="header-buttons">
+            <a href="index.html" class="btn btn-secondary volver-btn" style="text-decoration:none;"><span class="d-inline d-sm-none">←</span><span class="btn-text">Volver</span></a>
+            <button class="btn btn-secondary" onclick="resetCode()">↻ <span class="btn-text d-none d-sm-inline">Reiniciar</span></button>
+            <button class="btn btn-primary" onclick="runTests()">▶ <span class="btn-text d-none d-sm-inline">Ejecutar Test (Ctrl+Enter)</span></button>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs d-md-none" id="mobileNav">
+        <li class="nav-item"><button class="nav-link active" onclick="switchTab('instructions')" type="button">📖 Instrucciones</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="switchTab('editor')" type="button">✏️ Editor</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="switchTab('output')" type="button">📊 Resultado</button></li>
+    </ul>
+
+    <div class="main-container">
+        <div class="instructions-panel mobile-active" id="instructions">
+            <div class="step-nav" id="stepNav"></div>
+            <div class="instructions-header"><h2 id="lessonTitle">Lección 1: Lazy con collect</h2></div>
+            <div class="instructions-content" id="instructionsContent"></div>
+            <div style="padding: 15px 20px; border-top: 1px solid var(--gris-medio);">
+                <a class="guide-link" onclick="openGuide()">📖 Guía de Funciones</a>
+                <button class="solution-btn" onclick="showSolution()">💡 Solución (Ctrl+S)</button>
+            </div>
+        </div>
+
+        <div class="editor-panel" id="editorPanel">
+            <div class="editor-header"><span>📝 main.py</span><span id="editorStatus">Python 3</span></div>
+            <div class="editor-container" id="editorContainer"></div>
+            
+            <div class="output-panel">
+                <div class="output-header">
+                    <span>🖥️ Salida</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="output-clear" onclick="clearOutput()">Limpiar</button>
+                        <button class="next-lesson-btn" id="nextLessonBtn" onclick="goToNextLesson()" disabled>Siguiente lección →</button>
+                    </div>
+                </div>
+                <div class="output-loading" id="outputLoading">
+                    <div class="spinner-sm"></div>
+                    <span id="outputLoadingMsg">Preparando entorno Python...</span>
+                </div>
+                <div class="output-container" id="outputContainer">
+                    <div class="output-welcome">🐻‍❄️ <span>Polars Playground</span> - Salida</div>
+                    <div class="output-welcome" style="color: #666;">Usa print() para ver resultados aquí</div>
+                </div>
+            </div>
+            
+            <div class="test-panel">
+                <div class="test-header"><span>🧪 Resultados de Tests</span><span id="testCount">0/0 tests pasados</span></div>
+                <div class="test-results" id="testResults">
+                    <div class="test-info">Haz clic en "Ejecutar Test (Ctrl+Enter)" o presiona Ctrl+Enter para validar tu código.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOBILE ACTION BUTTONS -->
+    <div class="d-md-none position-fixed bottom-0 end-0 p-3" style="z-index: 100;display:flex;flex-direction:column;gap:10px;">
+        <button class="btn rounded-circle" onclick="window.open('https://docs.pola.rs/', '_blank')" style="width:48px;height:48px;font-size:1.2rem;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;display:flex;align-items:center;justify-content:center;">📖</button>
+        <button class="btn rounded-circle" onclick="showSolution()" style="width:48px;height:48px;font-size:1.2rem;background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%);color:white;border:none;display:flex;align-items:center;justify-content:center;">💡</button>
+    </div>
+    <button class="d-md-none position-fixed end-0 p-3 polars-btn" onclick="window.open('https://pola.rs/', '_blank')" style="z-index: 100;width:205px;height:205px;border:none;background:transparent;display:none;align-items:center;justify-content:center;bottom:-50px;right:109px;">
+        <img src="oso_polar.webp" alt="Polars" style="width:205px;height:205px;">
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function switchTab(tab) {
+            var instructions = document.querySelector('.instructions-panel');
+            var editorPanel = document.querySelector('.editor-panel');
+            var editorContainer = document.querySelector('.editor-container');
+            var tabs = document.querySelectorAll('#mobileNav .nav-link');
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            document.body.classList.remove('output-active');
+            document.body.classList.remove('editor-active');
+            if (tab === 'instructions') { tabs[0].classList.add('active'); instructions.style.display = 'flex'; editorPanel.style.display = 'none'; editorPanel.classList.remove('panel-visible'); }
+            else if (tab === 'editor') { tabs[1].classList.add('active'); instructions.style.display = 'none'; editorPanel.style.display = 'flex'; editorContainer.style.display = 'block'; editorPanel.classList.remove('panel-visible'); document.body.classList.add('editor-active'); if (window.monacoEditor) window.monacoEditor.layout(); }
+            else if (tab === 'output') { tabs[2].classList.add('active'); instructions.style.display = 'none'; editorPanel.style.display = 'flex'; editorPanel.classList.add('panel-visible'); document.body.classList.add('output-active'); if (window.monacoEditor) window.monacoEditor.layout(); }
+        }
+        if (window.innerWidth < 768) { document.querySelector('.editor-panel').style.display = 'none'; }
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 768) { document.querySelector('.instructions-panel').style.display = 'flex'; document.querySelector('.editor-panel').style.display = 'flex'; if (window.monacoEditor) window.monacoEditor.layout(); }
+            else { var activeTab = document.querySelector('#mobileNav .nav-link.active'); if (activeTab && activeTab.textContent.includes('Instrucciones')) { document.querySelector('.editor-panel').style.display = 'none'; } else { document.querySelector('.instructions-panel').style.display = 'none'; } }
+        });
+    </script>
+
+    <script>
+        const lessons = [
+            {
+                id: 1, title: "Lazy con collect",
+                instructions: `<p>La API lazy de Polars retrasa la ejecución hasta llamar a <code>collect()</code>. Puedes crear un LazyFrame con <code>lazy()</code>, aplicar filtros y optimizaciones, y ejecutar con <code>collect()</code>.</p><h3>Sintaxis</h3><pre><code>lf = df.lazy()\nresultado = lf.filter(pl.col("columna") > valor).collect()</code></pre><p><code>lazy()</code> crea un plan de ejecución que se optimiza antes de ejecutarse.</p><h3>Objetivo</h3><p>Crea un DataFrame de ventas, conviértelo a lazy, filtra por <code>cantidad > 5</code>, aplica <code>head(3)</code> y recoge el resultado. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["Laptop", "Mouse", "Teclado", "Monitor", "Audifonos"],\n    "cantidad": [3, 15, 8, 2, 20]\n})\n\n# Convierte a lazy, filtra cantidad > 5, toma head(3), y collect\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["Laptop", "Mouse", "Teclado", "Monitor", "Audifonos"],\n    "cantidad": [3, 15, 8, 2, 20]\n})\n\nresultado = df.lazy().filter(pl.col("cantidad") > 5).head(3).collect()\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.lazy().filter(pl.col("cantidad") > 5).head(3).collect()`, validation: `'resultado' in dir()`, error: "Debes crear una variable llamada 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.lazy().filter(pl.col("cantidad") > 5).head(3).collect()`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame de Polars" },
+                    { name: "Tiene como máximo 3 filas", code: `resultado = df.lazy().filter(pl.col("cantidad") > 5).head(3).collect()`, validation: `len(resultado) <= 3`, error: "Debe tener como máximo 3 filas" }
+                ]
+            },
+            {
+                id: 2, title: "Collect con filtros",
+                instructions: `<p>Al usar la API lazy, puedes encadenar múltiples filtros antes de <code>collect()</code>. Polars optimiza automáticamente estas operaciones.</p><h3>Ejemplo</h3><pre><code>resultado = (df.lazy()
+    .filter(pl.col("cantidad") > 5)
+    .filter(pl.col("precio") < 100)
+    .collect()
+)</code></pre><p>Puedes usar operadores <code>&</code> (AND) y <code>|</code> (OR) para combinar filtros.</p><h3>Objetivo</h3><p>Crea un DataFrame con columnas <code>producto</code>, <code>cantidad</code> y <code>precio</code>. Conviértelo a lazy, filtra donde <code>cantidad > 5</code> Y <code>precio < 100</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["Laptop", "Mouse", "Teclado", "Monitor", "Audifonos"],\n    "cantidad": [3, 15, 8, 2, 20],\n    "precio": [1200, 25, 80, 300, 45]\n})\n\n# Convierte a lazy, filtra donde cantidad > 5 Y precio < 100\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["Laptop", "Mouse", "Teclado", "Monitor", "Audifonos"],\n    "cantidad": [3, 15, 8, 2, 20],\n    "precio": [1200, 25, 80, 300, 45]\n})\n\nresultado = df.lazy().filter((pl.col("cantidad") > 5) & (pl.col("precio") < 100)).collect()\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.lazy().filter((pl.col("cantidad") > 5) & (pl.col("precio") < 100)).collect()`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.lazy().filter((pl.col("cantidad") > 5) & (pl.col("precio") < 100)).collect()`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene 3 filas", code: `resultado = df.lazy().filter((pl.col("cantidad") > 5) & (pl.col("precio") < 100)).collect()`, validation: `len(resultado) == 3`, error: "Mouse, Teclado y Audifonos cumplen ambas condiciones" }
+                ]
+            },
+            {
+                id: 3, title: "Limit y slice",
+                instructions: `<p>Polars permite seleccionar subconjuntos de filas con <code>head()</code> y <code>slice()</code>.</p><h3>Sintaxis</h3><pre><code>df.head(5)      # Primeras 5 filas
+df.slice(2, 3)  # Desde la posición 2, tomar 3 filas</code></pre><p><code>slice(offset, length)</code> permite empezar desde cualquier posición.</p><h3>Objetivo</h3><p>Crea un DataFrame y aplica <code>slice(1, 2)</code> para obtener las filas en posiciones 1 y 2. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "nombre": ["Ana", "Bob", "Carlos", "Diana", "Eva"],\n    "edad": [25, 30, 35, 28, 22]\n})\n\n# Aplica slice(1, 2) para obtener las filas en posiciones 1 y 2\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "nombre": ["Ana", "Bob", "Carlos", "Diana", "Eva"],\n    "edad": [25, 30, 35, 28, 22]\n})\n\nresultado = df.slice(1, 2)\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.slice(1, 2)`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.slice(1, 2)`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene 2 filas", code: `resultado = df.slice(1, 2)`, validation: `len(resultado) == 2`, error: "Debe tener 2 filas" }
+                ]
+            },
+            {
+                id: 4, title: "Window functions",
+                instructions: `<p>Las window functions permiten realizar cálculos sobre grupos de filas sin colapsar las filas como en <code>group_by</code>.</p><h3>Sintaxis</h3><pre><code>df.with_columns(
+    pl.col("columna").rank().over("grupo").alias("rank")
+)</code></pre><p><code>.over("grupo")</code> aplica la función a cada grupo definido por la columna.</p><h3>Objetivo</h3><p>Crea un DataFrame con categorías y calcula el ranking de <code>ventas</code> dentro de cada <code>categoria</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C", "D", "E", "F"],\n    "categoria": ["Electronica", "Electronica", "Ropa", "Ropa", "Electronica", "Ropa"],\n    "ventas": [100, 200, 150, 80, 300, 120]\n})\n\n# Calcula el rank de ventas dentro de cada categoria\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C", "D", "E", "F"],\n    "categoria": ["Electronica", "Electronica", "Ropa", "Ropa", "Electronica", "Ropa"],\n    "ventas": [100, 200, 150, 80, 300, 120]\n})\n\nresultado = df.with_columns(pl.col("ventas").rank().over("categoria").alias("rank"))\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.with_columns(pl.col("ventas").rank().over("categoria").alias("rank"))`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.with_columns(pl.col("ventas").rank().over("categoria").alias("rank"))`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene columna rank", code: `resultado = df.with_columns(pl.col("ventas").rank().over("categoria").alias("rank"))`, validation: `'rank' in resultado.columns`, error: "Debe tener la columna 'rank'" },
+                    { name: "Tiene 6 filas originales", code: `resultado = df.with_columns(pl.col("ventas").rank().over("categoria").alias("rank"))`, validation: `len(resultado) == 6`, error: "Debe mantener las 6 filas originales" }
+                ]
+            },
+            {
+                id: 5, title: "Rank con window",
+                instructions: `<p><code>dense_rank()</code> asigna rangos sin gaps (sin saltos entre posiciones).</p><h3>Diferencia entre rank methods</h3><pre><code># rank() - rangos con gaps para empates
+pl.col("valor").rank().over("grupo")
+
+# dense_rank() - rangos sin gaps
+pl.col("valor").rank(method="dense").over("grupo")</code></pre><h3>Objetivo</h3><p>Crea un DataFrame con grupos y calcula <code>dense_rank</code> de <code>puntaje</code> dentro de cada <code>grupo</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "nombre": ["Ana", "Bob", "Carlos", "Diana", "Eva"],\n    "grupo": ["A", "A", "B", "B", "A"],\n    "puntaje": [90, 85, 92, 88, 95]\n})\n\n# Calcula dense_rank de puntaje dentro de cada grupo\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "nombre": ["Ana", "Bob", "Carlos", "Diana", "Eva"],\n    "grupo": ["A", "A", "B", "B", "A"],\n    "puntaje": [90, 85, 92, 88, 95]\n})\n\nresultado = df.with_columns(pl.col("puntaje").rank(method="dense").over("grupo").alias("rank"))\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.with_columns(pl.col("puntaje").rank(method="dense").over("grupo").alias("rank"))`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.with_columns(pl.col("puntaje").rank(method="dense").over("grupo").alias("rank"))`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene columna rank", code: `resultado = df.with_columns(pl.col("puntaje").rank(method="dense").over("grupo").alias("rank"))`, validation: `'rank' in resultado.columns`, error: "Debe tener la columna 'rank'" }
+                ]
+            },
+            {
+                id: 6, title: "Shift y diff",
+                instructions: `<p><code>shift()</code> desplaza valores y <code>diff()</code> calcula la diferencia entre filas consecutivas.</p><h3>Sintaxis</h3><pre><code># Desplazar valores
+df.with_columns(pl.col("valor").shift(1).alias("anterior"))
+
+# Diferencia entre filas
+df.with_columns(pl.col("valor").diff().alias("cambio"))</code></pre><p><code>shift(1)</code> mueve los valores una posición hacia abajo. <code>diff()</code> calcula <code>valor[i] - valor[i-1]</code>.</p><h3>Objetivo</h3><p>Crea un DataFrame de serie temporal y calcula el <code>diff()</code> de la columna <code>valor</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "fecha": ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"],\n    "valor": [100, 110, 105, 120, 115]\n})\n\n# Calcula diff() de la columna valor\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "fecha": ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"],\n    "valor": [100, 110, 105, 120, 115]\n})\n\nresultado = df.with_columns(pl.col("valor").diff().alias("cambio"))\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.with_columns(pl.col("valor").diff().alias("cambio"))`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.with_columns(pl.col("valor").diff().alias("cambio"))`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Primera fila tiene null en cambio", code: `resultado = df.with_columns(pl.col("valor").diff().alias("cambio"))`, validation: `resultado["cambio"][0] is None or str(resultado["cambio"][0]) == 'null'`, error: "La primera fila debe tener null en cambio" }
+                ]
+            },
+            {
+                id: 7, title: "Rolling windows",
+                instructions: `<p>Las ventanas móviles permiten calcular estadísticas sobre un número fijo de filas consecutivas.</p><h3>Sintaxis</h3><pre><code>df.with_columns(
+    pl.col("valor").rolling_mean(window_size=3).alias("media_movil")
+)</code></pre><p>Otras funciones: <code>rolling_sum()</code>, <code>rolling_min()</code>, <code>rolling_max()</code>, <code>rolling_std()</code>.</p><h3>Objetivo</h3><p>Crea un DataFrame de serie temporal y calcula la <strong>media móvil</strong> de 3 períodos de la columna <code>valor</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "periodo": [1, 2, 3, 4, 5, 6],\n    "valor": [10, 20, 15, 25, 30, 20]\n})\n\n# Calcula la rolling mean con window_size=3\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "periodo": [1, 2, 3, 4, 5, 6],\n    "valor": [10, 20, 15, 25, 30, 20]\n})\n\nresultado = df.with_columns(pl.col("valor").rolling_mean(window_size=3).alias("media_movil"))\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.with_columns(pl.col("valor").rolling_mean(window_size=3).alias("media_movil"))`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.with_columns(pl.col("valor").rolling_mean(window_size=3).alias("media_movil"))`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene columna media_movil", code: `resultado = df.with_columns(pl.col("valor").rolling_mean(window_size=3).alias("media_movil"))`, validation: `'media_movil' in resultado.columns`, error: "Debe tener la columna 'media_movil'" },
+                    { name: "Tiene 6 filas", code: `resultado = df.with_columns(pl.col("valor").rolling_mean(window_size=3).alias("media_movil"))`, validation: `len(resultado) == 6`, error: "Debe mantener las 6 filas originales" }
+                ]
+            },
+            {
+                id: 8, title: "SQL con Polars",
+                instructions: `<p>Polars permite usar consultas SQL a través del método <code>.sql()</code>.</p><h3>Sintaxis</h3><pre><code>df.sql("SELECT * FROM self WHERE cantidad > 10")</code></pre><p><code>self</code> se refiere al DataFrame actual.</p><h3>Objetivo</h3><p>Crea un DataFrame y ejecuta una consulta SQL que seleccione las filas donde <code>cantidad > 10</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["Laptop", "Mouse", "Teclado", "Monitor"],\n    "cantidad": [5, 20, 15, 3]\n})\n\n# Usa SQL para filtrar donde cantidad > 10\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["Laptop", "Mouse", "Teclado", "Monitor"],\n    "cantidad": [5, 20, 15, 3]\n})\n\nresultado = df.sql("SELECT * FROM self WHERE cantidad > 10")\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.sql("SELECT * FROM self WHERE cantidad > 10")`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.sql("SELECT * FROM self WHERE cantidad > 10")`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene 2 filas", code: `resultado = df.sql("SELECT * FROM self WHERE cantidad > 10")`, validation: `len(resultado) == 2`, error: "Solo Mouse y Teclado tienen cantidad > 10" }
+                ]
+            },
+            {
+                id: 9, title: "CTEs en SQL",
+                instructions: `<p>Las CTEs (Common Table Expressions) permiten crear tablas temporales dentro de una consulta SQL.</p><h3>Sintaxis</h3><pre><code>df.sql("""
+    WITH resumen AS (
+        SELECT categoria, SUM(ventas) as total
+        FROM self
+        GROUP BY categoria
+    )
+    SELECT * FROM resumen
+""")</code></pre><p>Las CTEs mejoran la legibilidad de consultas complejas.</p><h3>Objetivo</h3><p>Crea un DataFrame y usa una CTE para agrupar por <code>categoria</code> y sumar <code>ventas</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C", "D"],\n    "categoria": ["Electronica", "Ropa", "Electronica", "Ropa"],\n    "ventas": [100, 200, 150, 80]\n})\n\n# Usa una CTE para agrupar por categoria y sumar ventas\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C", "D"],\n    "categoria": ["Electronica", "Ropa", "Electronica", "Ropa"],\n    "ventas": [100, 200, 150, 80]\n})\n\nresultado = df.sql("WITH resumen AS (SELECT categoria, SUM(ventas) as total FROM self GROUP BY categoria) SELECT * FROM resumen")\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.sql("WITH resumen AS (SELECT categoria, SUM(ventas) as total FROM self GROUP BY categoria) SELECT * FROM resumen")`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.sql("WITH resumen AS (SELECT categoria, SUM(ventas) as total FROM self GROUP BY categoria) SELECT * FROM resumen")`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene 2 filas (2 categorías)", code: `resultado = df.sql("WITH resumen AS (SELECT categoria, SUM(ventas) as total FROM self GROUP BY categoria) SELECT * FROM resumen")`, validation: `len(resultado) == 2`, error: "Debe tener 2 filas (una por categoría)" }
+                ]
+            },
+            {
+                id: 10, title: "Expresiones complejas",
+                instructions: `<p>Polars permite combinar múltiples expresiones en una sola operación <code>with_columns</code>.</p><h3>Ejemplo</h3><pre><code>resultado = (df
+    .with_columns(
+        (pl.col("cantidad") * pl.col("precio")).alias("total"),
+        (pl.col("ventas") / pl.col("objetivo") * 100).alias("avance")
+    )
+    .with_columns(
+        pl.when(pl.col("avance") >= 100).then(pl.lit("Cumplido")).otherwise(pl.lit("Pendiente")).alias("estado")
+    )
+)</code></pre><h3>Objetivo</h3><p>Crea un DataFrame de ventas, calcula <code>total</code>, <code>avance</code> y una columna <code>estado</code> que diga "Cumplido" si <code>avance >= 100</code>. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C"],\n    "cantidad": [10, 20, 15],\n    "precio": [50, 30, 40],\n    "ventas": [600, 500, 700],\n    "objetivo": [500, 600, 500]\n})\n\n# 1. Calcula total = cantidad * precio\n# 2. Calcula avance = ventas / objetivo * 100\n# 3. Crea estado: "Cumplido" si avance >= 100, sino "Pendiente"\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C"],\n    "cantidad": [10, 20, 15],\n    "precio": [50, 30, 40],\n    "ventas": [600, 500, 700],\n    "objetivo": [500, 600, 500]\n})\n\nresultado = (df\n    .with_columns(\n        (pl.col("cantidad") * pl.col("precio")).alias("total"),\n        (pl.col("ventas") / pl.col("objetivo") * 100).alias("avance")\n    )\n    .with_columns(\n        pl.when(pl.col("avance") >= 100).then(pl.lit("Cumplido")).otherwise(pl.lit("Pendiente")).alias("estado")\n    )\n)\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.with_columns((pl.col("cantidad") * pl.col("precio")).alias("total"), (pl.col("ventas") / pl.col("objetivo") * 100).alias("avance")).with_columns(pl.when(pl.col("avance") >= 100).then(pl.lit("Cumplido")).otherwise(pl.lit("Pendiente")).alias("estado"))`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.with_columns((pl.col("cantidad") * pl.col("precio")).alias("total"), (pl.col("ventas") / pl.col("objetivo") * 100).alias("avance")).with_columns(pl.when(pl.col("avance") >= 100).then(pl.lit("Cumplido")).otherwise(pl.lit("Pendiente")).alias("estado"))`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene columna estado", code: `resultado = df.with_columns((pl.col("cantidad") * pl.col("precio")).alias("total"), (pl.col("ventas") / pl.col("objetivo") * 100).alias("avance")).with_columns(pl.when(pl.col("avance") >= 100).then(pl.lit("Cumplido")).otherwise(pl.lit("Pendiente")).alias("estado"))`, validation: `'estado' in resultado.columns`, error: "Debe tener la columna 'estado'" },
+                    { name: "Producto A es Cumplido", code: `resultado = df.with_columns((pl.col("cantidad") * pl.col("precio")).alias("total"), (pl.col("ventas") / pl.col("objetivo") * 100).alias("avance")).with_columns(pl.when(pl.col("avance") >= 100).then(pl.lit("Cumplido")).otherwise(pl.lit("Pendiente")).alias("estado"))`, validation: `resultado.filter(pl.col("producto") == "A")["estado"][0] == "Cumplido"`, error: "Producto A tiene avance >= 100, debe ser 'Cumplido'" }
+                ]
+            },
+            {
+                id: 11, title: "Utf8 y tipos de texto",
+                instructions: `<p>Polars ofrece múltiples operaciones para trabajar con strings (tipo Utf8).</p><h3>Métodos comunes</h3><pre><code>pl.col("nombre").str.to_lowercase()
+pl.col("nombre").str.to_uppercase()
+pl.col("texto").str.contains("patrón")
+pl.col("texto").str.replace("viejo", "nuevo")</code></pre><h3>Objetivo</h3><p>Crea un DataFrame con strings y convierte la columna <code>nombre</code> a minúsculas. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "nombre": ["Ana Garcia", "Bob Lopez", "Carlos Ruiz"],\n    "ciudad": ["Madrid", "Barcelona", "Valencia"]\n})\n\n# Convierte nombre a minusculas\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "nombre": ["Ana Garcia", "Bob Lopez", "Carlos Ruiz"],\n    "ciudad": ["Madrid", "Barcelona", "Valencia"]\n})\n\nresultado = df.with_columns(pl.col("nombre").str.to_lowercase().alias("lower"))\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.with_columns(pl.col("nombre").str.to_lowercase().alias("lower"))`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.with_columns(pl.col("nombre").str.to_lowercase().alias("lower"))`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Primera fila lower es 'ana garcia'", code: `resultado = df.with_columns(pl.col("nombre").str.to_lowercase().alias("lower"))`, validation: `resultado["lower"][0] == "ana garcia"`, error: "La primera fila debe ser 'ana garcia'" }
+                ]
+            },
+            {
+                id: 12, title: "Categorical",
+                instructions: `<p>El tipo <code>Categorical</code> optimiza el uso de memoria para columnas con valores repetidos (strings que se repiten).</p><h3>Sintaxis</h3><pre><code>df.with_columns(pl.col("categoria").cast(pl.Categorical))</code></pre><p>Categorical almacena los valores únicos una sola vez y usa códigos internamente.</p><h3>Objetivo</h3><p>Crea un DataFrame y convierte la columna <code>categoria</code> a tipo Categorical. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C", "D"],\n    "categoria": ["Electronica", "Ropa", "Electronica", "Ropa"]\n})\n\n# Convierte categoria a tipo Categorical\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C", "D"],\n    "categoria": ["Electronica", "Ropa", "Electronica", "Ropa"]\n})\n\nresultado = df.with_columns(pl.col("categoria").cast(pl.Categorical))\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `resultado = df.with_columns(pl.col("categoria").cast(pl.Categorical))`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `resultado = df.with_columns(pl.col("categoria").cast(pl.Categorical))`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Columna categoria es Categorical", code: `resultado = df.with_columns(pl.col("categoria").cast(pl.Categorical))`, validation: `str(resultado["categoria"].dtype) == "cat" or "Categorical" in str(resultado["categoria"].dtype)`, error: "La columna categoria debe ser de tipo Categorical" }
+                ]
+            },
+            {
+                id: 13, title: "Explosion y listas",
+                instructions: `<p><code>explode()</code> expande una columna de listas en múltiples filas.</p><h3>Sintaxis</h3><pre><code>df.explode("columna_con_listas")</code></pre><p>Cada elemento de la lista se convierte en una fila separada.</p><h3>Objetivo</h3><p>Crea un DataFrame con una columna de listas <code>etiquetas</code> (usando listas de Python) y explota esa columna. Guarda en <code>resultado</code>.</p>`,
+                seedCode: `import polars as pl\n\n# 1. Crea un DataFrame con columnas:\n#    - "producto": ["A", "B", "C"]\n#    - "etiquetas": [["importante", "urgente"], ["normal"], ["urgente", "revision"]]\n# 2. Explota la columna etiquetas\n# Guarda el resultado en resultado`,
+                solution: `import polars as pl\n\ndf = pl.DataFrame({\n    "producto": ["A", "B", "C"],\n    "etiquetas": [["importante", "urgente"], ["normal"], ["urgente", "revision"]]\n})\n\nresultado = df.explode("etiquetas")\nprint(resultado)`,
+                tests: [
+                    { name: "Variable resultado existe", code: `df = pl.DataFrame({"producto": ["A", "B", "C"], "etiquetas": [["importante", "urgente"], ["normal"], ["urgente", "revision"]]}); resultado = df.explode("etiquetas")`, validation: `'resultado' in dir()`, error: "Debes crear 'resultado'" },
+                    { name: "Es un DataFrame", code: `df = pl.DataFrame({"producto": ["A", "B", "C"], "etiquetas": [["importante", "urgente"], ["normal"], ["urgente", "revision"]]}); resultado = df.explode("etiquetas")`, validation: `isinstance(resultado, pl.DataFrame)`, error: "resultado debe ser un DataFrame" },
+                    { name: "Tiene 5 filas", code: `df = pl.DataFrame({"producto": ["A", "B", "C"], "etiquetas": [["importante", "urgente"], ["normal"], ["urgente", "revision"]]}); resultado = df.explode("etiquetas")`, validation: `len(resultado) == 5`, error: "Debe tener 5 filas (2+1+2 etiquetas)" }
+                ]
+            }
+        ];
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentStep = parseInt(urlParams.get('lesson')) || 0;
+        if (currentStep < 0 || currentStep >= 13) currentStep = 0;
+        let pyodide = null;
+        let editor = null;
+        let cellCounter = 0;
+        const completedSteps = JSON.parse(localStorage.getItem('polarsCompletedAvanzado')) || [];
+
+        async function initPyodide() {
+            const loadingEl = document.getElementById('outputLoading');
+            const msgEl = document.getElementById('outputLoadingMsg');
+            
+            try {
+                msgEl.textContent = 'Preparando Pyodide...';
+                const pyodideStart = performance.now();
+                const pyodideInterval = setInterval(() => {
+                    const elapsed = (performance.now() - pyodideStart) / 1000;
+                    msgEl.textContent = `Preparando Pyodide... (${elapsed.toFixed(0)}s)`;
+                }, 1000);
+                
+                pyodide = await loadPyodide({
+                    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/"
+                });
+                
+                clearInterval(pyodideInterval);
+                const pyodideTime = ((performance.now() - pyodideStart) / 1000).toFixed(1);
+                msgEl.textContent = `Pyodide listo (${pyodideTime}s). Cargando polars...`;
+                
+                const polarsStart = performance.now();
+                const polarsInterval = setInterval(() => {
+                    const elapsed = (performance.now() - polarsStart) / 1000;
+                    msgEl.textContent = `Preparando polars... (${elapsed.toFixed(0)}s)`;
+                }, 1000);
+                
+                await pyodide.loadPackage("polars");
+                
+                clearInterval(polarsInterval);
+                const polarsTime = ((performance.now() - polarsStart) / 1000).toFixed(1);
+                
+                msgEl.textContent = `¡Listo! (Pyodide: ${pyodideTime}s, Polars: ${polarsTime}s)`;
+                loadingEl.style.background = 'rgba(0,212,170,0.15)';
+                setTimeout(() => { loadingEl.classList.add('hidden'); }, 2000);
+            } catch (e) {
+                console.error("Error loading Pyodide/polars:", e);
+                msgEl.textContent = "Error: " + e.message;
+                loadingEl.style.background = 'rgba(231,76,60,0.15)';
+                loadingEl.querySelector('.spinner-sm').style.borderTopColor = '#e74c3c';
+            }
+        }
+
+        function clearOutput() {
+            cellCounter = 0;
+            document.getElementById('outputContainer').innerHTML = '<div class="output-welcome">🐻‍❄️ <span>Polars Playground</span> - Salida</div><div class="output-welcome" style="color: #666;">Usa print() para ver resultados aquí</div>';
+        }
+
+        function writeToOutput(text, isError = false) {
+            const container = document.getElementById('outputContainer');
+            const cell = document.createElement('div');
+            cell.className = 'output-cell';
+            const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            cell.innerHTML = `<div class="output-cell-prompt">${isError ? 'Error:' : `Out [${++cellCounter}]:`}</div><div class="output-cell-text${isError ? ' error' : ''}">${escaped}</div>`;
+            container.appendChild(cell);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function writeRichOutput(name, html) {
+            const container = document.getElementById('outputContainer');
+            const cell = document.createElement('div');
+            cell.className = 'output-cell';
+            cell.innerHTML = `<div class="output-cell-prompt" style="color:#61afef;font-size:0.8rem;margin-bottom:2px;font-weight:600;">${name}</div><div class="output-cell-html">${html}</div>`;
+            container.appendChild(cell);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function captureStdout(pyodide, code) {
+            let output = [];
+            pyodide.setStdout({ batched: (text) => output.push(text) });
+            pyodide.setStderr({ batched: (text) => { if (!/Warning|DeprecationWarning|FutureWarning|DeprecationWarning:/i.test(text)) output.push('\x1b[31m' + text + '\x1b[0m'); } });
+            try { pyodide.runPython(`import polars as _pl
+import warnings
+warnings.filterwarnings('ignore')
+`); } catch (e) {}
+            try { pyodide.runPython(code); } catch (error) { output.push('\x1b[31m' + error.message + '\x1b[0m'); }
+            const textOutput = output.join('');
+            let richOutputs = [];
+            try {
+                richOutputs = pyodide.runPython(`
+_rich = []
+for _n, _o in list(globals().items()):
+    if _n.startswith('_'): continue
+    if isinstance(_o, _pl.DataFrame):
+        try:
+            _d = _o.to_dict()
+            _cols = list(_d.keys())
+            _rows = list(zip(*[_d[c] for c in _cols]))
+            _rich.append((_n, _cols, [list(r) for r in _rows]))
+        except Exception: pass
+_rich`);
+            } catch (e) {}
+            if (richOutputs && richOutputs.length > 0) {
+                richOutputs.forEach(item => {
+                    if (item && item.length === 3) {
+                        const [name, cols, rows] = item;
+                        let html = '<table><thead><tr>';
+                        cols.forEach(c => { html += `<th>${c}</th>`; });
+                        html += '</tr></thead><tbody>';
+                        rows.forEach(row => {
+                            html += '<tr>';
+                            row.forEach(val => { html += `<td>${val === null ? 'null' : val}</td>`; });
+                            html += '</tr>';
+                        });
+                        html += '</tbody></table>';
+                        writeRichOutput(name, html);
+                    }
+                });
+            }
+            else if (textOutput.trim()) { writeToOutput(textOutput); }
+            pyodide.setStdout({ batched: (text) => { writeToOutput(text); } });
+            pyodide.setStderr({ batched: (text) => { writeToOutput(text, true); } });
+            return output.join('');
+        }
+
+        function initMonacoEditor() {
+            require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+            require(['vs/editor/editor.main'], function () {
+                editor = monaco.editor.create(document.getElementById('editorContainer'), {
+                    value: '', language: 'python', theme: 'vs-dark', minimap: { enabled: false },
+                    fontSize: 14, lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 4, wordWrap: 'on'
+                });
+                window.monacoEditor = editor;
+                loadLesson(currentStep);
+            });
+        }
+
+        function loadLesson(index) {
+            currentStep = index;
+            const lesson = lessons[index];
+            document.getElementById('lessonTitle').textContent = `Lección ${lesson.id}: ${lesson.title}`;
+            document.getElementById('instructionsContent').innerHTML = lesson.instructions;
+            document.getElementById('stepInfo').textContent = `Lección ${lesson.id} de ${lessons.length}`;
+            if (editor) editor.setValue(lesson.seedCode);
+            document.getElementById('testResults').innerHTML = '<div class="test-info">Haz clic en "Ejecutar Test (Ctrl+Enter)" o presiona Ctrl+Enter para validar tu código.</div>';
+            document.getElementById('testCount').textContent = '0/0 tests pasados';
+            clearOutput();
+            document.getElementById('nextLessonBtn').disabled = true;
+            updateStepNav();
+        }
+
+        function updateStepNav() {
+            const nav = document.getElementById('stepNav');
+            nav.innerHTML = '';
+            lessons.forEach((lesson, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'step-dot';
+                if (index === currentStep) dot.classList.add('active');
+                if (completedSteps.includes(index)) dot.classList.add('completed');
+                dot.textContent = index + 1;
+                dot.onclick = () => loadLesson(index);
+                nav.appendChild(dot);
+            });
+        }
+
+        async function runTests() {
+            if (!pyodide || !editor) { alert('El entorno aún se está cargando.'); return; }
+            const lesson = lessons[currentStep];
+            const userCode = editor.getValue();
+            const resultsDiv = document.getElementById('testResults');
+            const testCount = document.getElementById('testCount');
+            resultsDiv.innerHTML = '<div class="test-info">Ejecutando tests...</div>';
+            clearOutput();
+            pyodide.setStdout({ batched: (text) => {} });
+            pyodide.setStderr({ batched: (text) => {} });
+            let initialError = null;
+            const initialOutput = captureStdout(pyodide, userCode);
+            if (initialOutput && initialOutput.includes('\x1b[31m')) { initialError = initialOutput.replace(/\x1b\[31m/g, '').replace(/\x1b\[0m/g, '').trim(); }
+            pyodide.setStdout({ batched: (text) => { writeToOutput(text); } });
+            pyodide.setStderr({ batched: (text) => { writeToOutput(text, true); } });
+            let passed = 0, total = lesson.tests.length, allPassed = true, results = [];
+            if (initialError) { results.push(`<div class="test-fail" style="margin-bottom: 10px;">❌ Error detectado: ${initialError}</div>`); }
+            for (let i = 0; i < lesson.tests.length; i++) {
+                const test = lesson.tests[i];
+                try {
+                    let silentOutput = [];
+                    pyodide.setStdout({ batched: (text) => silentOutput.push(text) });
+                    pyodide.setStderr({ batched: (text) => silentOutput.push(text) });
+                    pyodide.runPython(userCode);
+                    const result = pyodide.runPython(test.validation);
+                    pyodide.setStdout({ batched: (text) => { writeToOutput(text); } });
+                    pyodide.setStderr({ batched: (text) => { writeToOutput(text, true); } });
+                    if (result) { passed++; results.push(`<div class="test-pass">✅ Test ${i + 1}: ${test.name} - PASADO</div>`); }
+                    else { allPassed = false; results.push(`<div class="test-fail">❌ Test ${i + 1}: ${test.name} - FALLIDO</div>`, `<div class="test-fail" style="margin-left: 20px;">${test.error}</div>`); }
+                } catch (error) {
+                    allPassed = false;
+                    results.push(`<div class="test-fail">❌ Test ${i + 1}: ${test.name} - FALLIDO</div>`, `<div class="test-fail" style="margin-left: 20px;">${test.error}</div>`);
+                    pyodide.setStdout({ batched: (text) => { writeToOutput(text); } });
+                    pyodide.setStderr({ batched: (text) => { writeToOutput(text, true); } });
+                }
+            }
+            resultsDiv.innerHTML = results.join('');
+            testCount.textContent = `${passed}/${total} tests pasados`;
+            if (allPassed) {
+                resultsDiv.innerHTML += `<div class="test-pass" style="margin-top: 15px; font-size: 1.1em;">🎉 ¡Todos los tests pasaron!</div>`;
+                if (!completedSteps.includes(currentStep)) { completedSteps.push(currentStep); localStorage.setItem('polarsCompletedAvanzado', JSON.stringify(completedSteps)); updateStepNav(); }
+                if (currentStep < lessons.length - 1) document.getElementById('nextLessonBtn').disabled = false;
+            }
+        }
+
+        function goToNextLesson() { if (currentStep < lessons.length - 1) { document.getElementById('nextLessonBtn').disabled = true; loadLesson(currentStep + 1); } }
+        function showModal(errorMsg) { document.getElementById('modalDetails').textContent = ''; document.getElementById('errorModal').classList.add('active'); }
+        function closeModal() { document.getElementById('errorModal').classList.remove('active'); }
+        document.getElementById('errorModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+        function openGuide() { document.getElementById('guideModal').classList.add('active'); }
+        function closeGuide() { document.getElementById('guideModal').classList.remove('active'); }
+        function showSolution() { const lesson = lessons[currentStep]; if (lesson.solution && editor) { if (confirm('¿Ver la solución?')) editor.setValue(lesson.solution); } }
+        function resetCode() { if (editor && confirm('¿Reiniciar código?')) { editor.setValue(lessons[currentStep].seedCode); clearOutput(); } }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { closeModal(); closeGuide(); }
+            if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); runTests(); }
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); showSolution(); }
+        });
+        document.addEventListener('DOMContentLoaded', function() { initMonacoEditor(); initPyodide(); document.getElementById('guideModal').addEventListener('click', function(e) { if (e.target === this) closeGuide(); }); });
+    </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}</script>
+
+    <div class="guide-modal-overlay" id="guideModal">
+        <div class="guide-modal">
+            <div class="guide-modal-header">
+                <h2>📖 Guía de Polars Avanzado</h2>
+                <button class="guide-close-btn" onclick="closeGuide()">&times;</button>
+            </div>
+            <div class="guide-modal-content">
+                <div class="guide-section">
+                    <h3>Lazy API: df.lazy() y collect()</h3>
+                    <p>Convierte un DataFrame en un LazyFrame. Las operaciones se acumulan como un plan de ejecución que se optimiza antes de ejecutarse con <code>collect()</code>.</p>
+                    <pre><code># Crear LazyFrame y ejecutar
+resultado = (
+    df.lazy()
+    .filter(pl.col("ventas") > 100)
+    .collect()
+)
+
+# Ver plan de ejecución
+plan = df.lazy().filter(pl.col("ventas") > 100).explain()
+print(plan)</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>Filtros con expresiones complejas</h3>
+                    <p>Combina múltiples condiciones con operadores <code>&amp;</code> (AND) y <code>|</code> (OR).</p>
+                    <pre><code># Filtro con AND
+resultado = df.filter(
+    (pl.col("cantidad") > 5) &amp; (pl.col("precio") < 100)
+)
+
+# Filtro con OR
+resultado = df.filter(
+    (pl.col("categoria") == "A") | (pl.col("ventas") > 1000)
+)
+
+# Filtro con is_in
+seleccion = df.filter(pl.col("producto").is_in(["A", "B", "C"]))</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>df.head() y df.slice()</h3>
+                    <p>Controla la cantidad de filas que retornas.</p>
+                    <pre><code># Primeras N filas
+primeras_5 = df.head(5)
+
+# Slice: desde posición offset, tomar length filas
+subset = df.slice(offset=2, length=3)  # Posiciones 2, 3, 4</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>Window functions con .over()</h3>
+                    <p>Calcula agregaciones por grupos sin colapsar filas. Se usa con <code>.over()</code>.</p>
+                    <pre><code># Promedio por grupo
+df = df.with_columns(
+    pl.col("ventas").mean().over("vendedor").alias("promedio_vendedor")
+)
+
+# Suma por categoría
+df = df.with_columns(
+    pl.col("monto").sum().over("categoria").alias("total_categoria")
+)
+
+# Múltiples agregaciones por grupo
+df = df.with_columns([
+    pl.col("ventas").mean().over("region").alias("promedio_region"),
+    pl.col("ventas").max().over("region").alias("max_region"),
+])</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>Rank con window</h3>
+                    <p>Asigna rankings dentro de grupos.</p>
+                    <pre><code># Ranking dentro de cada vendedor
+df = df.with_columns(
+    pl.col("ventas").rank(descending=True).over("vendedor").alias("rank")
+)
+
+# Dense rank (sin saltos)
+df = df.with_columns(
+    pl.col("ventas").rank(method="dense", descending=True).over("vendedor").alias("dense_rank")
+)</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>shift() y diff()</h3>
+                    <p>Accede a valores anteriores/siguientes o calcula diferencias.</p>
+                    <pre><code># Valor anterior (shift por defecto es 1)
+df = df.with_columns(
+    pl.col("ventas").shift(1).alias("ventas_anterior")
+)
+
+# Diferencia con el valor anterior
+df = df.with_columns(
+    pl.col("ventas").diff().alias("diferencia")
+)
+
+# Shift negativo (valor siguiente)
+df = df.with_columns(
+    pl.col("ventas").shift(-1).alias("ventas_siguiente")
+)</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>Rolling windows</h3>
+                    <p>Calcula medias móviles y otras agregaciones en ventanas deslizantes.</p>
+                    <pre><code># Media móvil de 3 períodos
+df = df.with_columns(
+    pl.col("ventas").rolling_mean(window_size=3).alias("media_movil_3")
+)
+
+# Suma acumulada
+df = df.with_columns(
+    pl.col("ventas").cum_sum().alias("acumulado")
+)
+
+# Mínimo y máximo en ventana
+df = df.with_columns([
+    pl.col("ventas").rolling_min(window_size=3).alias("min_movil"),
+    pl.col("ventas").rolling_max(window_size=3).alias("max_movil"),
+])</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>SQL con Polars</h3>
+                    <p>Ejecuta consultas SQL sobre DataFrames usando el método <code>sql()</code>.</p>
+                    <pre><code># Registrar DataFrame y consultar con SQL
+resultado = df.sql("SELECT * FROM self WHERE ventas > 100 ORDER BY ventas DESC")
+
+# Consulta con GROUP BY
+resumen = df.sql("""
+    SELECT vendedor, SUM(ventas) as total
+    FROM self
+    GROUP BY vendedor
+    ORDER BY total DESC
+""")</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>CTEs en SQL</h3>
+                    <p>Common Table Expressions para consultas complejas.</p>
+                    <pre><code># Usar CTEs con sql()
+resultado = df.sql("""
+    WITH top_vendedores AS (
+        SELECT vendedor, SUM(ventas) as total
+        FROM self
+        GROUP BY vendedor
+        HAVING total > 500
+    )
+    SELECT * FROM top_vendedores
+    ORDER BY total DESC
+""")</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>Expresiones complejas con alias, cast, when/then</h3>
+                    <p>Combina múltiples expresiones en una consulta.</p>
+                    <pre><code># when/then (equivalente a CASE WHEN)
+df = df.with_columns(
+    pl.when(pl.col("ventas") > 1000)
+    .then(pl.lit("Alto"))
+    .when(pl.col("ventas") > 500)
+    .then(pl.lit("Medio"))
+    .otherwise(pl.lit("Bajo"))
+    .alias("nivel")
+)
+
+# Cast de tipos
+df = df.with_columns(
+    pl.col("precio").cast(pl.Utf8).alias("precio_str")
+)</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>Operaciones de texto con .str</h3>
+                    <p>Manipula strings con el accesor <code>.str</code>.</p>
+                    <pre><code># Mayúsculas y minúsculas
+df = df.with_columns(pl.col("producto").str.to_uppercase())
+
+# Reemplazar texto
+df = df.with_columns(pl.col("nombre").str.replace_all("old", "new"))
+
+# Longitud
+df = df.with_columns(pl.col("producto").str.len_bytes().alias("longitud"))
+
+# Contiene
+df = df.filter(pl.col("producto").str.contains("laptop"))</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>Categorical</h3>
+                    <p>Optimiza columnas con pocos valores únicos usando tipo categórico.</p>
+                    <pre><code># Convertir a categorical
+df = df.with_columns(pl.col("categoria").cast(pl.Categorical))
+
+# Ordinal (con orden definido)
+from polars import Enum
+df = df.with_columns(
+    pl.col("nivel").cast(Enum(["bajo", "medio", "alto"]))
+)</code></pre>
+                </div>
+                <div class="guide-section">
+                    <h3>explode() — Explorar listas</h3>
+                    <p>Expande una columna de listas en múltiples filas.</p>
+                    <pre><code># Explode columnas de listas
+df = pl.DataFrame({
+    "producto": ["A", "B", "C"],
+    "etiquetas": [["importante", "urgente"], ["normal"], ["urgente", "revision"]]
+})
+
+resultado = df.explode("etiquetas")
+# A: importante, A: urgente, B: normal, C: urgente, C: revision</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

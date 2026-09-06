@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polars Playground - Aprende Polars de Forma Interactiva</title>
+    <meta name="description" content="Aprende Polars, la librería de análisis de datos ultrarrápida para Python, de forma interactiva. Editor en navegador, tests automáticos y guías educativas.">
+    <meta name="keywords" content="Polars, Python, análisis de datos, DataFrame, tutorial interactivo, learn by doing, data science, WASM, Pyodide">
+    <meta name="author" content="Polars Playground">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://polars-playground.vercel.app/">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Polars Playground - Aprende Polars de Forma Interactiva">
+    <meta property="og:description" content="Aprende Polars, la librería de análisis de datos ultrarrápida para Python, de forma interactiva. Editor en navegador, tests automáticos y guías educativas.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://polars-playground.vercel.app/">
+    <meta property="og:image" content="https://polars-playground.vercel.app/oso_polar.webp">
+    <meta property="og:site_name" content="Polars Playground">
+    <meta property="og:locale" content="es_ES">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Polars Playground - Aprende Polars de Forma Interactiva">
+    <meta name="twitter:description" content="Aprende Polars, la librería de análisis de datos ultrarrápida para Python, de forma interactiva.">
+    <meta name="twitter:image" content="https://polars-playground.vercel.app/oso_polar.webp">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/webp" href="./oso_polar.webp">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Polars Playground",
+        "description": "Aprende Polars, la librería de análisis de datos ultrarrápida para Python, de forma interactiva.",
+        "url": "https://polars-playground.vercel.app/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web Browser",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "inLanguage": "es"
+    }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --azul: #0a0a23;
+            --verde: #00d4aa;
+            --morado: #667eea;
+            --morado-claro: #764ba2;
+            --gris-claro: #f8f9fa;
+            --gris-medio: #e9ecef;
+            --texto: #333;
+            --blanco: #fff;
+            --naranja: #f39c12;
+            --rojo: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #E6FAFA;
+            color: var(--texto);
+            min-height: 100vh;
+            padding-top: 50px;
+        }
+
+        .header {
+            background: var(--azul);
+            color: var(--blanco);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 50px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .header-logo {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: var(--morado);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--morado-claro);
+        }
+        
+        .btn-secondary {
+            background: #485454;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #3a4545;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .hero p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .levels-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 50px 20px;
+        }
+        
+        .levels-title {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--azul);
+            margin-bottom: 10px;
+        }
+        
+        .levels-subtitle {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .level-card {
+            background: var(--blanco);
+            border-radius: 14px;
+            padding: 30px 25px;
+            border: 2px solid var(--gris-medio);
+            transition: all 0.3s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .level-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+        }
+        
+        .level-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+        }
+        
+        .level-card.beginner::before { background: var(--verde); }
+        .level-card.intermediate::before { background: var(--naranja); }
+        .level-card.advanced::before { background: var(--rojo); }
+        
+        .level-card.beginner:hover { border-color: var(--verde); }
+        .level-card.intermediate:hover { border-color: var(--naranja); }
+        .level-card.advanced:hover { border-color: var(--rojo); }
+        
+        .level-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .level-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--azul);
+            margin-bottom: 8px;
+        }
+        
+        .level-card.beginner .level-name { color: #00a884; }
+        .level-card.intermediate .level-name { color: #d68910; }
+        .level-card.advanced .level-name { color: #c0392b; }
+        
+        .level-desc {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+        
+        .level-topics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .level-topic {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: #E6FAFA;
+            color: #555;
+        }
+        
+        .level-card.beginner .level-topic { background: rgba(0, 212, 170, 0.1); color: #00a884; }
+        .level-card.intermediate .level-topic { background: rgba(243, 156, 18, 0.1); color: #d68910; }
+        .level-card.advanced .level-topic { background: rgba(231, 76, 60, 0.1); color: #c0392b; }
+        
+        .level-progress {
+            margin-bottom: 18px;
+        }
+        
+        .level-progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .level-progress-text {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .level-progress-text strong {
+            color: var(--texto);
+        }
+        
+        .level-progress-pct {
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        
+        .level-card.beginner .level-progress-pct { color: #00a884; }
+        .level-card.intermediate .level-progress-pct { color: #d68910; }
+        .level-card.advanced .level-progress-pct { color: #c0392b; }
+        
+        .level-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gris-medio);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .level-progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .level-card.beginner .level-progress-fill { background: var(--verde); }
+        .level-card.intermediate .level-progress-fill { background: var(--naranja); }
+        .level-card.advanced .level-progress-fill { background: var(--rojo); }
+        
+        .level-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid var(--gris-medio);
+        }
+        
+        .level-stat {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .level-stat strong {
+            color: var(--texto);
+        }
+        
+        .level-arrow {
+            font-size: 1.3rem;
+            color: var(--morado);
+            transition: transform 0.2s;
+        }
+        
+        .level-card:hover .level-arrow {
+            transform: translateX(5px);
+        }
+
+        .challenge-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 20px 50px;
+        }
+        
+        .challenge-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 14px;
+            padding: 40px 35px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 30px;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            color: white;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .challenge-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        .challenge-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+        }
+        
+        .challenge-glow {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 70%);
+            top: -50px;
+            right: -50px;
+            pointer-events: none;
+        }
+        
+        .challenge-info {
+            flex: 1;
+        }
+        
+        .challenge-badge {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .challenge-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .challenge-desc {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            margin-bottom: 18px;
+        }
+        
+        .challenge-retos {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .challenge-reto {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .challenge-reto-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #667eea;
+            font-weight: 700;
+        }
+        
+        .challenge-cta {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        
+        .challenge-btn {
+            background: #667eea;
+            color: white;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .challenge-btn:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+        
+        .challenge-stars {
+            font-size: 1.3rem;
+            letter-spacing: 4px;
+        }
+
+        .footer {
+            background: var(--azul);
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+            padding: 20px;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 900px) {
+            .hero h1 { font-size: 2rem; }
+            .levels-grid { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
+        }
+
+        @media (max-width: 600px) {
+            .header { flex-wrap: wrap; gap: 8px; height: auto; padding: 10px 15px; }
+            .hero { padding: 40px 15px; }
+            .hero h1 { font-size: 1.5rem; }
+            .hero p { font-size: 0.95rem; }
+            .levels-container { padding: 30px 15px; }
+            .level-card { padding: 25px 20px; }
+            .challenge-section { padding: 0 15px 30px; }
+            .challenge-card { flex-direction: column; text-align: center; padding: 25px 20px; }
+            .challenge-title { font-size: 1.3rem; }
+            .challenge-desc { font-size: 0.9rem; }
+            .challenge-retos { justify-content: center; }
+            .challenge-cta { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); width: 100%; }
+            .challenge-btn { width: 100%; padding: 14px; font-size: 1rem; }
+            .preload-bar { font-size: 0.75rem; padding: 8px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="header-logo" style="text-decoration:none;"><img src="oso_polar.webp" alt="Logo Polars Playground" style="height:1.2em;vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);"> Polars Playground</a>
+        <div class="header-buttons">
+            <a href="https://docs.pola.rs/" class="btn btn-secondary" target="_blank">Documentación</a>
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1>Aprende Polars desde Cero</h1>
+        <p>Domina la librería de DataFrames más rápida para Python. Elige tu nivel y comienza a aprender de forma interactiva.</p>
+    </div>
+
+    <div class="levels-container">
+        <h2 class="levels-title">Elige tu nivel</h2>
+        <p class="levels-subtitle">Selecciona el nivel que mejor se adapte a tu experiencia</p>
+        
+        <div class="levels-grid">
+            <a href="principiante.html" class="level-card beginner">
+                <div class="level-icon">📗</div>
+                <div class="level-name">Principiante</div>
+                <div class="level-desc">Nunca usaste Polars o tienes poco conocimiento. Aprende los fundamentos desde cero.</div>
+                <div class="level-topics">
+                    <span class="level-topic">Importar polars</span>
+                    <span class="level-topic">DataFrames</span>
+                    <span class="level-topic">CSV</span>
+                    <span class="level-topic">Expresiones</span>
+                    <span class="level-topic">Filtrado</span>
+                    <span class="level-topic">Estadísticas</span>
+                </div>
+                <div class="level-progress" id="progressBeginner">
+                    <div class="level-progress-header">
+                        <div class="level-progress-text"><strong id="completedBeginner">0</strong> de 14 lecciones</div>
+                        <div class="level-progress-pct" id="pctBeginner">0%</div>
+                    </div>
+                    <div class="level-progress-bar">
+                        <div class="level-progress-fill" id="fillBeginner" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="level-footer">
+                    <div class="level-stat"><strong>14</strong> lecciones &middot; <strong>42</strong> tests</div>
+                    <div class="level-arrow">&rarr;</div>
+                </div>
+            </a>
+
+            <a href="intermedio.html" class="level-card intermediate">
+                <div class="level-icon">📙</div>
+                <div class="level-name">Intermedio</div>
+                <div class="level-desc">Conoces lo básico y quieres profundizar. Aprende joins, pivots, time series y Lazy API.</div>
+                <div class="level-topics">
+                    <span class="level-topic">Joins</span>
+                    <span class="level-topic">Pivots</span>
+                    <span class="level-topic">Time Series</span>
+                    <span class="level-topic">Lazy API</span>
+                </div>
+                <div class="level-progress" id="progressIntermediate">
+                    <div class="level-progress-header">
+                        <div class="level-progress-text"><strong id="completedIntermediate">0</strong> de 13 lecciones</div>
+                        <div class="level-progress-pct" id="pctIntermediate">0%</div>
+                    </div>
+                    <div class="level-progress-bar">
+                        <div class="level-progress-fill" id="fillIntermediate" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="level-footer">
+                    <div class="level-stat"><strong>13</strong> lecciones &middot; <strong>39</strong> tests</div>
+                    <div class="level-arrow">&rarr;</div>
+                </div>
+            </a>
+
+            <a href="avanzado.html" class="level-card advanced">
+                <div class="level-icon">📕</div>
+                <div class="level-name">Avanzado</div>
+                <div class="level-desc">Dominas Polars y quieres optimización, streaming, SQL y casos complejos del mundo real.</div>
+                <div class="level-topics">
+                    <span class="level-topic">Streaming</span>
+                    <span class="level-topic">Window Functions</span>
+                    <span class="level-topic">SQL</span>
+                    <span class="level-topic">GPU</span>
+                </div>
+                <div class="level-progress" id="progressAdvanced">
+                    <div class="level-progress-header">
+                        <div class="level-progress-text"><strong id="completedAdvanced">0</strong> de 13 lecciones</div>
+                        <div class="level-progress-pct" id="pctAdvanced">0%</div>
+                    </div>
+                    <div class="level-progress-bar">
+                        <div class="level-progress-fill" id="fillAdvanced" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="level-footer">
+                    <div class="level-stat"><strong>13</strong> lecciones &middot; <strong>39</strong> tests</div>
+                    <div class="level-arrow">&rarr;</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="challenge-section">
+        <a href="desafio.html" class="challenge-card">
+            <div class="challenge-glow"></div>
+            <div class="challenge-info">
+                <div class="challenge-badge">Desafío</div>
+                <div class="challenge-title">¿Listo para comprobar tus habilidades?</div>
+                <div class="challenge-desc">3 retos difíciles que pondrán a prueba todo lo que aprendiste. Resuelve problemas reales del mundo real sin pistas.</div>
+                <div class="challenge-retos">
+                    <div class="challenge-reto"><div class="challenge-reto-icon">1</div>Limpieza de datos</div>
+                    <div class="challenge-reto"><div class="challenge-reto-icon">2</div>Análisis avanzado</div>
+                    <div class="challenge-reto"><div class="challenge-reto-icon">3</div>Pipeline completo</div>
+                </div>
+            </div>
+            <div class="challenge-cta">
+                <div class="challenge-stars">⭐⭐⭐</div>
+                <div class="challenge-btn">Aceptar Desafío</div>
+            </div>
+        </a>
+    </div>
+
+    <div class="footer">
+        <p>Polars Playground &copy; 2026 &mdash; Proyecto educativo de código abierto</p>
+        <p style="font-size: 0.75rem; margin-top: 8px; opacity: 0.7;">Lecciones basadas en la <a href="https://docs.pola.rs/user-guide/" target="_blank" style="color: inherit; text-decoration: underline;">documentación oficial de Polars</a></p>
+    </div>
+
+    </div>
+
+
+    <script>
+        function updateBeginnerProgress() {
+            const total = 14;
+            const completed = JSON.parse(localStorage.getItem('polarsCompleted')) || [];
+            const done = Math.min(completed.length, total);
+            const pct = Math.round((done / total) * 100);
+            document.getElementById('completedBeginner').textContent = done;
+            document.getElementById('pctBeginner').textContent = pct + '%';
+            document.getElementById('fillBeginner').style.width = pct + '%';
+        }
+
+        function updateIntermediateProgress() {
+            const total = 13;
+            const completed = JSON.parse(localStorage.getItem('polarsCompletedIntermedio')) || [];
+            const done = completed.length;
+            const pct = Math.round((done / total) * 100);
+            document.getElementById('completedIntermediate').textContent = done;
+            document.getElementById('pctIntermediate').textContent = pct + '%';
+            document.getElementById('fillIntermediate').style.width = pct + '%';
+        }
+
+        function updateAdvancedProgress() {
+            const total = 13;
+            const completed = JSON.parse(localStorage.getItem('polarsCompletedAvanzado')) || [];
+            const done = completed.length;
+            const pct = Math.round((done / total) * 100);
+            document.getElementById('completedAdvanced').textContent = done;
+            document.getElementById('pctAdvanced').textContent = pct + '%';
+            document.getElementById('fillAdvanced').style.width = pct + '%';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBeginnerProgress();
+            updateIntermediateProgress();
+            updateAdvancedProgress();
+        });
+    </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}</script>
+</body>
+</html>

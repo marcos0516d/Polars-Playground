@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /lecciones_*
+
+Sitemap: https://polars-playground.vercel.app/sitemap.xml
