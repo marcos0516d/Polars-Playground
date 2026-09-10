@@ -159,7 +159,7 @@
             <div class="instructions-header"><h2 id="lessonTitle">Lección 1: Importar Polars</h2></div>
             <div class="instructions-content" id="instructionsContent"></div>
             <div style="padding: 15px 20px; border-top: 1px solid var(--gris-medio);">
-                <a class="guide-link" onclick="openGuide()">📖 Guía de Funciones</a>
+                <a class="guide-link" onclick="openGuide()">📖 Guía Informativa</a>
                 <button class="solution-btn" onclick="showSolution()">💡 Solución (Ctrl+S)</button>
             </div>
         </div>
@@ -637,7 +637,7 @@ _rich`);
         document.getElementById('errorModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
         function openGuide() { document.getElementById('guideModal').classList.add('active'); }
         function closeGuide() { document.getElementById('guideModal').classList.remove('active'); }
-        function showSolution() { const lesson = lessons[currentStep]; if (lesson.solution && editor) { if (confirm('¿Ver la solución?')) editor.setValue(lesson.solution); } }
+        function showSolution() { const lesson = lessons[currentStep]; if (lesson.solution && editor) { if (confirm('¿Ver la solución? Se reemplazará tu código actual.')) editor.setValue(lesson.solution); } }
         function resetCode() { if (editor && confirm('¿Reiniciar código?')) { editor.setValue(lessons[currentStep].seedCode); clearOutput(); } }
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') { closeModal(); closeGuide(); }

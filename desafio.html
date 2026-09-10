@@ -164,7 +164,6 @@
             </div>
             <div class="instructions-content" id="instructionsContent"></div>
             <div style="padding: 15px 20px; border-top: 1px solid var(--gris-medio);">
-                <button class="solution-btn" onclick="showSolution()">🏳️ Solución (Ctrl+S)</button>
             </div>
         </div>
 
@@ -820,16 +819,6 @@ _rich
             if (e.target === this) closeModal();
         });
 
-        // ==================== SOLUTION ====================
-        function showSolution() {
-            const lesson = lessons[currentStep];
-            if (lesson.solution && editor) {
-                if (confirm('¿Ver la solución? Se reemplazará tu código actual.')) {
-                    editor.setValue(lesson.solution);
-                }
-            }
-        }
-
         // ==================== RESET ====================
         function resetCode() {
             if (editor && confirm('¿Estás seguro de que quieres reiniciar el código?')) {
@@ -845,10 +834,6 @@ _rich
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
                 runTests();
-            }
-            if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                showSolution();
             }
         });
 
