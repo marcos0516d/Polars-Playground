@@ -74,6 +74,9 @@
             font-size: 0.85rem; color: var(--verde);
         }
         .output-loading.hidden { display: none; }
+        .pyodide-loading { display: none; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(0,212,170,0.1); border-radius: 20px; font-size: 0.75rem; color: var(--verde); margin-left: 10px; }
+        .pyodide-loading.active { display: inline-flex; }
+        .pyodide-loading .spinner-xs { width: 12px; height: 12px; border: 2px solid rgba(0,212,170,0.3); border-top-color: var(--verde); border-radius: 50%; animation: spin 0.8s linear infinite; }
         .output-loading .spinner-sm {
             width: 14px; height: 14px;
             border: 2px solid rgba(0,212,170,0.3);
@@ -140,6 +143,7 @@
     <div class="header">
         <a href="index.html" class="header-logo" style="text-decoration:none;"><img src="oso_polar.webp" alt="Logo Polars Playground" style="height:1.2em;vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);"> Polars Playground <span style="color: var(--verde);">- Nivel Principiante</span></a>
         <div class="header-steps d-none d-sm-block" id="stepInfo">Lección 1 de 14</div>
+        <div class="pyodide-loading" id="pyodideLoading"><div class="spinner-xs"></div> Cargando entorno...</div>
         <div class="header-buttons">
             <a href="index.html" class="btn btn-secondary volver-btn" style="text-decoration:none;"><span class="d-inline d-sm-none">←</span><span class="btn-text">Volver</span></a>
             <button class="btn btn-secondary" onclick="resetCode()">↻ <span class="btn-text d-none d-sm-inline">Reiniciar</span></button>
@@ -435,6 +439,8 @@ df.write_csv('archivo.csv')</code></pre><h3>Objetivo</h3><p>Guarda el DataFrame 
         async function initPyodide() {
             const loadingEl = document.getElementById('outputLoading');
             const msgEl = document.getElementById('outputLoadingMsg');
+            const headerLoading = document.getElementById('pyodideLoading');
+            headerLoading.classList.add('active');
             
             try {
                 msgEl.textContent = 'Preparando Pyodide...';
@@ -465,12 +471,15 @@ df.write_csv('archivo.csv')</code></pre><h3>Objetivo</h3><p>Guarda el DataFrame 
                 
                 msgEl.textContent = `¡Listo! (Pyodide: ${pyodideTime}s, Polars: ${polarsTime}s)`;
                 loadingEl.style.background = 'rgba(0,212,170,0.15)';
-                setTimeout(() => { loadingEl.classList.add('hidden'); }, 2000);
+                setTimeout(() => { loadingEl.classList.add('hidden'); headerLoading.classList.remove('active'); }, 2000);
             } catch (e) {
                 console.error("Error loading Pyodide/polars:", e);
                 msgEl.textContent = "Error: " + e.message;
                 loadingEl.style.background = 'rgba(231,76,60,0.15)';
                 loadingEl.querySelector('.spinner-sm').style.borderTopColor = '#e74c3c';
+                headerLoading.innerHTML = '⚠️ Error';
+                headerLoading.style.color = '#e74c3c';
+                headerLoading.style.background = 'rgba(231,76,60,0.1)';
             }
         }
 
